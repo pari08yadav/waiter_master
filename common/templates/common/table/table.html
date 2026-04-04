@@ -1,0 +1,439 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}{{ table.restaurant.name }} | Waiter{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { background: var(--surface-2); }
+  .table-header {
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: .85rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+  }
+  .restaurant-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .table-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: var(--red-subtle);
+    color: var(--red);
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .25rem .75rem;
+    border-radius: 50px;
+  }
+  .cat-sidebar { padding: 1.25rem 0; }
+  .cat-sidebar-title { font-size: .7rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); padding: 0 .75rem; margin-bottom: .75rem; }
+  .section-cat-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    padding: .5rem 0;
+    margin-bottom: .75rem;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .section-cat-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .menu-card {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius);
+    transition: var(--transition);
+    margin-bottom: .5rem;
+  }
+  .menu-card:hover { background: var(--red-subtle); }
+  .menu-card-img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+  .menu-card-body { flex: 1; min-width: 0; }
+  .menu-card-name { font-size: .95rem; font-weight: 600; color: var(--text); margin-bottom: .2rem; }
+  .menu-card-price { font-size: .9rem; font-weight: 700; color: var(--red); margin-bottom: .3rem; }
+  .menu-card-desc { font-size: .78rem; color: var(--text-3); line-height: 1.5; }
+  .veg-dot { width: 18px; height: 18px; border: 2px solid #15803d; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .veg-dot i { font-size: .5rem; color: #15803d; }
+  .nonveg-dot { width: 18px; height: 18px; border: 2px solid #dc2626; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nonveg-dot i { font-size: .5rem; color: #dc2626; }
+  .mobile-cart-bar {
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    padding: 1rem 1.25rem;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 20px rgba(230,57,70,.35);
+  }
+  .search-wrap { position: relative; margin-bottom: 1.5rem; }
+  .search-wrap .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+  .search-wrap input { padding-left: 2.75rem; border-radius: 50px; background: var(--surface); border: 1.5px solid var(--border); }
+  .search-wrap input:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-glow); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Sticky Header -->
+<div class="table-header">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <div class="restaurant-name">{{ table.restaurant.name }}</div>
+        <span class="table-badge"><i class="fas fa-chair"></i>Table #{{ table.number }}</span>
+      </div>
+      <div class="d-none d-sm-flex gap-2">
+        <button class="btn btn-primary btn-sm d-none" id="cart-btn" onclick="openCart()">
+          <i class="fa fa-shopping-cart me-2"></i><span id="cart-total-label"></span>
+        </button>
+        <a href="{% url 'common:table-order' table.uid %}" class="btn btn-sm" style="background:var(--surface-3);color:var(--text);border:1px solid var(--border);">
+          <i class="fa fa-bowl-food me-2"></i>My Orders
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Sidebar -->
+    <!-- <div class="col-md-3 d-none d-md-block sticky-sidebar">
+      <div class="cat-sidebar">
+        <div class="cat-sidebar-title">Menu</div>
+        {% for entry in category_data %}
+        <button class="cat-nav-btn" id="nav-{{ entry.category.uid }}"
+          onclick="scrollToCategory('{{ entry.category.uid }}')">
+          {{ entry.category.name }}
+          <span style="float:right;font-size:.72rem;color:var(--text-3);">{{ entry.menu_items|length }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </div> -->
+
+    <!-- Main -->
+    <main class="col-md-9">
+      <!-- Search -->
+      <div class="search-wrap">
+        <i class="fas fa-search search-icon"></i>
+        <input type="search" class="form-control form-control-lg" id="search-input"
+          placeholder="Search dishes, drinks…" value="{{ search }}">
+      </div>
+
+      {% if not category_data %}
+        {% include 'common/partials/empty.html' with title="No Menu Available" text="This restaurant hasn't added any items yet." icon="fas fa-utensils" %}
+      {% else %}
+        {% for entry in category_data %}
+        <section id="category-{{ entry.category.uid }}" class="mb-5">
+          <div class="section-cat-title">{{ entry.category.name }}</div>
+          {% for item in entry.menu_items %}
+          <div class="menu-card">
+            <img class="menu-card-img"
+              src="{% if item.image %}{{ item.image.url }}{% else %}https://placehold.co/90x90/fff0f0/dc3545?text={{ item.name|slice:':2'|upper }}{% endif %}"
+              onerror="this.src='https://placehold.co/90x90/fff0f0/dc3545?text=NA'"
+              alt="{{ item.name }}">
+            <div class="menu-card-body">
+              <div class="d-flex align-items-start gap-2 mb-1">
+                {% if item.menu_type == 'VEG' %}
+                  <span class="veg-dot mt-1"><i class="fas fa-circle"></i></span>
+                {% else %}
+                  <span class="nonveg-dot mt-1"><i class="fas fa-circle"></i></span>
+                {% endif %}
+                <div class="menu-card-name">{{ item.name }}</div>
+              </div>
+              <div class="menu-card-price">
+                {% if item.half_price %}<span style="font-size:.8rem;color:var(--text-2);">{{ item.half_price|format_currency }}</span> / {% endif %}
+                {{ item.full_price|format_currency }}
+              </div>
+              {% if item.description %}<div class="menu-card-desc">{{ item.description }}</div>{% endif %}
+              {% if item.ingredients %}<div class="menu-card-desc mt-1"><strong>Ingredients:</strong> {{ item.ingredients }}</div>{% endif %}
+            </div>
+            <div class="d-flex align-items-center" style="flex-shrink:0;">
+              {% if item.available %}
+              <div class="btn-group btn-group-sm cart-btn-group"
+                data-uid="{{ item.uid }}"
+                data-name="{{ item.name }}"
+                data-full-price="{{ item.full_price }}"
+                data-half-price="{{ item.half_price }}">
+                <button class="btn btn-outline-primary d-none remove-btn" onclick="removeItem(this)">
+                  <i class="fas fa-minus"></i>
+                </button>
+                <button class="btn btn-outline-primary d-none qty-display" disabled style="min-width:32px;"></button>
+                <button class="btn btn-outline-primary add-btn" onclick="addItem(this)">
+                  <i class="fas fa-plus"></i><span class="ms-2 fw-bold d-none d-sm-inline" style="font-size:.75rem;">ADD</span>
+                </button>
+              </div>
+              {% else %}
+              <span class="badge" style="background:#fee2e2;color:#dc2626;">Unavailable</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </section>
+        {% endfor %}
+      {% endif %}
+    </main>
+  </div>
+</div>
+
+<!-- Mobile Cart Bar -->
+<div class="fixed-bottom d-sm-none d-none mobile-cart-bar" id="mobile-bar" style="z-index:40;">
+  <div class="d-flex justify-content-between align-items-center gap-3">
+    <span class="fw-semibold text-white" id="mobile-total-label" style="font-size:.9rem;"></span>
+    <div class="d-flex gap-2">
+      <button class="btn btn-light btn-sm" onclick="openCart()">
+        <i class="fa fa-shopping-cart me-1"></i>Cart
+      </button>
+      <a href="{% url 'common:table-order' table.uid %}" class="btn btn-light btn-sm">
+        <i class="fa fa-bowl-food me-1"></i>Orders
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Price Type Modal -->
+<div class="modal fade" id="price-type-modal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" onsubmit="savePriceType(event)">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-sliders me-2 text-primary"></i>Choose Size</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="fw-semibold mb-3" id="modal-item-name" style="font-size:.95rem;"></div>
+        <div id="price-type-choices"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i>Add to Cart</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Cart Modal -->
+<div class="modal fade" id="cart-modal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-shopping-cart me-2 text-primary"></i>
+          Your Cart <span class="badge" style="background:var(--red-subtle);color:var(--red);margin-left:.5rem;" id="cart-count">0</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0" id="cart-body"></div>
+      <div class="modal-footer flex-column align-items-stretch d-none" id="cart-footer">
+        <div class="d-flex justify-content-between align-items-center fw-bold fs-5 mb-3 px-1">
+          <span>Total</span>
+          <span class="text-primary" id="cart-grand-total"></span>
+        </div>
+        <button class="btn btn-primary" onclick="placeOrder()">
+          <i class="fas fa-check me-2"></i>Place Order
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  const TABLE_UID = "{{ table.uid }}";
+  function getCsrf() {
+    const m = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+    return m ? m.slice(10) : '';
+  }
+
+  function getCart() {
+    try {
+      const match = document.cookie.split('; ').find(r => r.startsWith('cart='));
+      return match ? JSON.parse(decodeURIComponent(match.slice(5))) : {};
+    } catch { return {}; }
+  }
+  function setCart(cart) {
+    document.cookie = 'cart=' + encodeURIComponent(JSON.stringify(cart)) + '; path=/; SameSite=Lax';
+  }
+  function fmt(v) {
+    return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(v);
+  }
+  function getQuantity(uid) {
+    const cart = getCart();
+    return ['HALF','FULL'].reduce((s,t) => s + (cart[uid+'/'+t]?.quantity ?? 0), 0);
+  }
+  function updateCartBtns(uid) {
+    const qty = getQuantity(uid);
+    const g = document.querySelector(`.cart-btn-group[data-uid="${uid}"]`);
+    if (!g) return;
+    const rm = g.querySelector('.remove-btn'), qd = g.querySelector('.qty-display'), ab = g.querySelector('.add-btn');
+    if (qty > 0) {
+      rm.classList.remove('d-none'); rm.classList.replace('btn-outline-primary','btn-primary');
+      qd.classList.remove('d-none'); qd.textContent = qty;
+      ab.classList.replace('btn-outline-primary','btn-primary');
+      ab.innerHTML = '<i class="fas fa-plus"></i>';
+    } else {
+      rm.classList.add('d-none'); qd.classList.add('d-none');
+      ab.classList.replace('btn-primary','btn-outline-primary');
+      ab.innerHTML = '<i class="fas fa-plus"></i><span class="ms-2 fw-bold d-none d-sm-inline" style="font-size:.75rem;">ADD</span>';
+    }
+  }
+  function updateCartUI() {
+    const cart = getCart();
+    const total = Object.values(cart).reduce((s,i) => s + i.quantity * parseFloat(i.price), 0);
+    const count = Object.values(cart).reduce((s,i) => s + i.quantity, 0);
+    const cb = document.getElementById('cart-btn'), mb = document.getElementById('mobile-bar');
+    if (total > 0) {
+      cb.classList.remove('d-none');
+      document.getElementById('cart-total-label').textContent = fmt(total);
+      mb.classList.remove('d-none'); mb.classList.add('d-flex');
+      document.getElementById('mobile-total-label').textContent = count + ' item' + (count>1?'s':'') + ' · ' + fmt(total);
+    } else {
+      cb.classList.add('d-none'); mb.classList.add('d-none'); mb.classList.remove('d-flex');
+    }
+    document.getElementById('cart-count').textContent = count;
+  }
+
+  let pendingItem = null, priceTypeModal = null;
+
+  function addItem(btn) {
+    const g = btn.closest('.cart-btn-group');
+    const halfPrice = parseFloat(g.dataset.halfPrice);
+    if (halfPrice > 0) {
+      pendingItem = g;
+      document.getElementById('modal-item-name').textContent = g.dataset.name;
+      document.getElementById('price-type-choices').innerHTML = `
+        <label class="d-flex align-items-center gap-3 border rounded-3 p-3 mb-2 cursor-pointer" style="transition:all .2s;">
+          <input type="radio" name="price_type" value="HALF" class="form-check-input" style="width:18px;height:18px;" required>
+          <div><div style="font-weight:600;">Half</div><div style="color:var(--red);font-weight:700;">${fmt(halfPrice)}</div></div>
+        </label>
+        <label class="d-flex align-items-center gap-3 border rounded-3 p-3 cursor-pointer" style="transition:all .2s;">
+          <input type="radio" name="price_type" value="FULL" class="form-check-input" style="width:18px;height:18px;" checked>
+          <div><div style="font-weight:600;">Full</div><div style="color:var(--red);font-weight:700;">${fmt(parseFloat(g.dataset.fullPrice))}</div></div>
+        </label>`;
+      if (!priceTypeModal) priceTypeModal = new bootstrap.Modal(document.getElementById('price-type-modal'));
+      priceTypeModal.show();
+    } else {
+      doAdd(g.dataset.uid, 'FULL', parseFloat(g.dataset.fullPrice), g.dataset.name);
+    }
+  }
+  function savePriceType(e) {
+    e.preventDefault();
+    const pt = document.querySelector('input[name="price_type"]:checked').value;
+    const g = pendingItem;
+    doAdd(g.dataset.uid, pt, pt==='HALF' ? parseFloat(g.dataset.halfPrice) : parseFloat(g.dataset.fullPrice), g.dataset.name);
+    priceTypeModal.hide();
+  }
+  function doAdd(uid, pt, price, name) {
+    const cart = getCart(), key = uid+'/'+pt;
+    cart[key] = { price, price_type: pt, quantity: (cart[key]?.quantity ?? 0) + 1, name: name || cart[key]?.name || uid };
+    setCart(cart); updateCartBtns(uid); updateCartUI();
+  }
+  function removeItem(btn) {
+    const g = btn.closest('.cart-btn-group'), uid = g.dataset.uid, cart = getCart();
+    for (const t of ['HALF','FULL']) {
+      const key = uid+'/'+t;
+      if (cart[key]) { cart[key].quantity = Math.max(cart[key].quantity-1,0); if(!cart[key].quantity) delete cart[key]; break; }
+    }
+    setCart(cart); updateCartBtns(uid); updateCartUI();
+  }
+  function openCart() { renderCart(); new bootstrap.Modal(document.getElementById('cart-modal')).show(); }
+  function renderCart() {
+    const cart = getCart(), entries = Object.entries(cart);
+    const body = document.getElementById('cart-body'), footer = document.getElementById('cart-footer');
+    if (!entries.length) {
+      body.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-shopping-cart"></i></div><h5>Cart is Empty</h5><p>Add items from the menu.</p></div>';
+      footer.classList.add('d-none'); return;
+    }
+    let total = 0;
+    const rows = entries.map(([key, item]) => {
+      const lt = item.quantity * parseFloat(item.price); total += lt;
+      const [uid, pt] = key.split('/');
+      const name = item.name || uid;
+      return `<div class="d-flex align-items-center gap-3 px-4 py-3 border-bottom">
+        <div class="flex-grow-1">
+          <div style="font-weight:600;font-size:.875rem;">${name}</div>
+          <div style="font-size:.75rem;color:var(--text-3);">${pt.charAt(0)+pt.slice(1).toLowerCase()} · ${fmt(item.price)}</div>
+        </div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" onclick="cartRm('${uid}','${pt}')"><i class="fas fa-minus"></i></button>
+          <button class="btn btn-outline-primary" disabled style="min-width:36px;">${item.quantity}</button>
+          <button class="btn btn-primary" onclick="cartAdd('${uid}','${pt}',${item.price},'${name.replace(/'/g,"\\'")}')"><i class="fas fa-plus"></i></button>
+        </div>
+        <div style="font-weight:700;color:var(--red);min-width:70px;text-align:right;">${fmt(lt)}</div>
+      </div>`;
+    }).join('');
+    body.innerHTML = rows;
+    document.getElementById('cart-grand-total').textContent = fmt(total);
+    footer.classList.remove('d-none');
+  }
+  function cartAdd(uid, pt, price, name) { doAdd(uid, pt, parseFloat(price), name); renderCart(); }
+  function cartRm(uid, pt) {
+    const cart = getCart(), key = uid+'/'+pt;
+    if (cart[key]) { cart[key].quantity = Math.max(cart[key].quantity-1,0); if(!cart[key].quantity) delete cart[key]; }
+    setCart(cart); updateCartBtns(uid); updateCartUI(); renderCart();
+  }
+  async function placeOrder() {
+    const btn = document.querySelector('#cart-footer .btn-primary');
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Placing...';
+      const r = await fetch('/order/'+TABLE_UID+'/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json' }
+      });
+      if (r.ok) {
+        setCart({});
+        updateCartUI();
+        bootstrap.Modal.getInstance(document.getElementById('cart-modal'))?.hide();
+        window.location = "{% url 'common:table-order' table.uid %}";
+      } else {
+        const err = await r.json().catch(() => ({}));
+        alert(err.detail || 'Failed to place order. Please try again.');
+      }
+    } catch { alert('Error placing order. Please try again.'); }
+    finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check me-2"></i>Place Order';
+    }
+  }
+
+  // Search
+  let st;
+  document.getElementById('search-input').addEventListener('input', function() {
+    clearTimeout(st);
+    st = setTimeout(() => { const u = new URL(window.location); u.searchParams.set('search', this.value); window.location = u; }, 350);
+  });
+
+  // Scroll + active nav
+  function scrollToCategory(uid) {
+    const el = document.getElementById('category-'+uid); if (!el) return;
+    const off = document.querySelector('.table-header').offsetHeight + 16;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - off, behavior:'smooth' });
+    setActiveNav(uid);
+  }
+  function setActiveNav(uid) {
+    document.querySelectorAll('.cat-nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-'+uid)?.classList.add('active');
+  }
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) setActiveNav(e.target.id.replace('category-','')); });
+  }, { rootMargin:'-25% 0px -65% 0px', threshold:0 });
+  document.querySelectorAll('section[id^="category-"]').forEach(s => obs.observe(s));
+
+  document.querySelectorAll('.cart-btn-group').forEach(g => updateCartBtns(g.dataset.uid));
+  updateCartUI();
+</script>
+{% endblock %}

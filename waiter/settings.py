@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 # Standard Library
@@ -25,6 +25,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 from django.urls import reverse_lazy
 
+# Ensure BASE_DIR points to /Users/rachitavya/Desktop/pari/waiter-master
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -226,13 +227,14 @@ PHONENUMBER_DEFAULT_REGION = "IN"
 PHONENUMBER_DEFAULT_FORMAT = "E164"
 
 # Media
+# Use an absolute path join to be safe
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.getenv("MEDIA_ROOT")
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 BASE_URL = os.getenv("BASE_URL")
 
 
-USE_S3 = os.getenv("AWS_USE_OBJECT_STORE", "False") == "True"
+USE_S3 =  False
 
 if USE_S3:
     # aws settings

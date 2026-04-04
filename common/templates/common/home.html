@@ -1,14 +1,269 @@
 {% extends 'common/base.html' %}
-{% load vite_tags static %}
-
-{% block script %}
-  {% vite_js "src/main.js" %}
-{% endblock script %}
-
-{% block content %}
-  <div id="app"></div>
-{% endblock content %}
+{% load static %}
+{% block title %}Waiter — Scan. Order. Enjoy.{% endblock %}
 
 {% block extra_head %}
-  {% vite_css_standalone 'src/styles/style.scss' %}
-{% endblock extra_head %}
+<style>
+  body { background: var(--dark-2); }
+  .hero-bg {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 40%, #16213e 70%, #0f3460 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .hero-bg::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(230,57,70,.15) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(99,102,241,.1) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .hero-nav {
+    padding: 1.25rem 0;
+    position: relative;
+    z-index: 10;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .hero-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1rem;
+    position: relative;
+    z-index: 10;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: rgba(230,57,70,.15);
+    border: 1px solid rgba(230,57,70,.3);
+    color: #ff8a8a;
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    padding: .4rem 1rem;
+    border-radius: 50px;
+    margin-bottom: 1.5rem;
+  }
+  .hero-title {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 1.25rem;
+  }
+  .hero-title .accent {
+    background: linear-gradient(135deg, var(--red-light), var(--red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-desc {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,.6);
+    line-height: 1.75;
+    max-width: 560px;
+    margin: 0 auto 2.5rem;
+  }
+  .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .hero-actions .btn { padding: .8rem 2rem; font-size: .95rem; border-radius: 50px; }
+  .btn-hero-primary {
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    color: #fff;
+    box-shadow: 0 8px 32px rgba(230,57,70,.4);
+  }
+  .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(230,57,70,.5); color: #fff; }
+  .btn-hero-outline {
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,.2) !important;
+    backdrop-filter: blur(8px);
+  }
+  .btn-hero-outline:hover { background: rgba(255,255,255,.15); color: #fff; transform: translateY(-2px); }
+  .hero-features {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+    margin-top: 3.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .hero-feature { text-align: center; }
+  .hero-feature .feat-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto .6rem;
+    font-size: 1.1rem;
+    color: rgba(255,255,255,.7);
+  }
+  .hero-feature .feat-label { font-size: .78rem; color: rgba(255,255,255,.45); font-weight: 500; }
+  #scanner-modal .modal-content { background: #1a1a2e; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; }
+  #scanner-modal .modal-header { background: transparent; border-bottom: 1px solid rgba(255,255,255,.08); padding: 1.25rem 1.5rem; }
+  #scanner-modal .modal-title { color: #fff; font-size: 1rem; font-weight: 700; }
+  #scanner-modal .modal-body { padding: 1.25rem 1.5rem; }
+  #scanner-modal .modal-footer { background: transparent; border-top: 1px solid rgba(255,255,255,.08); padding: 1rem 1.5rem; }
+  #qr-reader { border-radius: 12px; overflow: hidden; }
+  #qr-reader * { border-radius: 8px; }
+  .qr-error { background: rgba(220,38,38,.15); border: 1px solid rgba(220,38,38,.3); color: #fca5a5; border-radius: 10px; padding: .65rem 1rem; font-size: .82rem; margin-top: 1rem; display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-bg">
+  <!-- Nav -->
+  <nav class="hero-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+      <a href="{% url 'common:home' %}">
+        <img src="{% static 'images/logo.png' %}" alt="Waiter" style="height:36px;filter:brightness(0) invert(1);">
+      </a>
+      <a href="{% url 'common:dashboard' %}" class="btn btn-hero-outline btn-sm">
+        <i class="fas fa-th-large me-2"></i>Dashboard
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero-content">
+    <div class="text-center fade-in-up" style="max-width:680px;">
+      <div class="hero-badge">
+        <i class="fas fa-star"></i> The Future of Dining
+      </div>
+      <h1 class="hero-title">
+        Scan. Order.<br><span class="accent">Enjoy.</span>
+      </h1>
+      <p class="hero-desc">
+        Skip the wait. Scan the QR code at your table, browse the menu, customize your order, and track it in real time — all from your phone.
+      </p>
+      <div class="hero-actions">
+        <button class="btn btn-hero-primary" id="open-scanner-btn">
+          <i class="fas fa-qrcode me-2"></i>Scan QR Code
+        </button>
+        <a href="{% url 'common:dashboard' %}" class="btn btn-hero-outline">
+          Dashboard <i class="fas fa-arrow-right ms-2"></i>
+        </a>
+      </div>
+      <div class="hero-features">
+        <div class="hero-feature">
+          <div class="feat-icon"><i class="fas fa-bolt"></i></div>
+          <div class="feat-label">Instant Orders</div>
+        </div>
+        <div class="hero-feature">
+          <div class="feat-icon"><i class="fas fa-clock"></i></div>
+          <div class="feat-label">Real-time Tracking</div>
+        </div>
+        <div class="hero-feature">
+          <div class="feat-icon"><i class="fas fa-shield-halved"></i></div>
+          <div class="feat-label">Contactless</div>
+        </div>
+        <div class="hero-feature">
+          <div class="feat-icon"><i class="fas fa-mobile-screen"></i></div>
+          <div class="feat-label">Mobile First</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QR Scanner Modal -->
+<div class="modal fade" id="scanner-modal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-qrcode me-2" style="color:#e63946;"></i>Scan QR Code</h5>
+      </div>
+      <div class="modal-body">
+        <input type="file" id="qr-file-input" accept="image/*" style="display:none;">
+        <div class="qr-upload-area" id="qr-upload-area">
+          <div class="upload-icon"><i class="fas fa-image"></i></div>
+          <div class="upload-title">Select QR Code Image</div>
+          <div class="upload-sub">Tap to choose an image from your device</div>
+        </div>
+        <div class="qr-scanning" id="qr-scanning"><i class="fas fa-spinner fa-spin me-2"></i>Reading QR code...</div>
+        <div class="qr-error" id="qr-error"><i class="fas fa-circle-exclamation me-2"></i>No QR code found. Please try a clearer image.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="close-scanner">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  const modalEl = document.getElementById('scanner-modal');
+  const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+  const fileInput = document.getElementById('qr-file-input');
+  const uploadArea = document.getElementById('qr-upload-area');
+  const errorEl = document.getElementById('qr-error');
+  const scanningEl = document.getElementById('qr-scanning');
+
+  document.getElementById('open-scanner-btn').addEventListener('click', function () {
+    errorEl.style.display = 'none';
+    bsModal.show();
+  });
+
+  document.getElementById('close-scanner').addEventListener('click', function () {
+    bsModal.hide();
+  });
+
+  // clicking the upload area triggers file input
+  uploadArea.addEventListener('click', function () {
+    fileInput.value = '';
+    errorEl.style.display = 'none';
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', function () {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    errorEl.style.display = 'none';
+    scanningEl.style.display = 'block';
+
+    const html5Qrcode = new Html5Qrcode('qr-reader-hidden');
+    html5Qrcode.scanFile(file, true)
+      .then(function (decodedText) {
+        scanningEl.style.display = 'none';
+        bsModal.hide();
+        // ensure trailing slash so Django URL pattern matches
+        var url = decodedText.endsWith('/') ? decodedText : decodedText + '/';
+        window.location.href = url;
+      })
+      .catch(function () {
+        scanningEl.style.display = 'none';
+        errorEl.style.display = 'block';
+      });
+  });
+</script>
+<!-- hidden element required by Html5Qrcode.scanFile -->
+<div id="qr-reader-hidden" style="display:none;"></div>
+{% endblock %}

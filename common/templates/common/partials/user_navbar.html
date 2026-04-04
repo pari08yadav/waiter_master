@@ -1,0 +1,25 @@
+{% load static %}
+<nav class="wtr-navbar">
+  <div class="container d-flex align-items-center">
+    <a href="{% url 'common:home' %}" class="brand">
+      <img src="{% static 'images/logo.png' %}" alt="Waiter">
+    </a>
+    <div class="nav-right">
+      {% if request.user.is_authenticated %}
+        <span class="nav-user-chip d-none d-sm-inline">{{ request.user.username }}</span>
+        {% if request.user.is_staff %}
+          <a href="/wtr-adm/" target="_blank" class="nav-pill admin">
+            <i class="fas fa-user-shield"></i><span class="d-none d-sm-inline">Admin</span>
+          </a>
+        {% endif %}
+        <a href="{% url 'common:logout' %}" class="nav-pill logout">
+          <i class="fas fa-right-from-bracket"></i><span class="d-none d-sm-inline">Logout</span>
+        </a>
+      {% else %}
+        <a href="{% url 'common:login' %}" class="nav-pill">
+          <i class="fas fa-lock"></i><span class="d-none d-sm-inline">Login</span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>

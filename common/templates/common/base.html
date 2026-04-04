@@ -1,31 +1,117 @@
-{% load static vite_tags %}
-
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{% static 'fa/css/all.min.css' %}">
-  <link rel="stylesheet" href="{% static 'telinput/intlTelInput.css' %}">
   <link rel="icon" type="image/ico" href="{% static 'images/logo-favicon.ico' %}">
-  {% vite_css_standalone 'src/styles/style.scss' %}
-  {% block extra_head %}{% endblock extra_head %}
-  {% block head_script %}{% endblock head_script %}
-  <title>
-    {% block title %}
-      Waiter
-    {% endblock title %}
-  </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="{% static 'fa/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/waiter.css' %}">
+  {% block extra_head %}{% endblock %}
+  <title>{% block title %}Waiter{% endblock %}</title>
 </head>
-
-<body data-bs-theme="light">
+<body>
 {% csrf_token %}
-{% block content %}{% endblock content %}
+{% block content %}{% endblock %}
 <script src="{% static 'js/bootstrap.bundle.min.js' %}" crossorigin="anonymous"></script>
 <script src="{% static 'fa/js/all.min.js' %}"></script>
 <script src="{% static 'js/html5-qrcode.min.js' %}"></script>
-{% block script %}{% endblock script %}
+{% block script %}{% endblock %}
+
+{% if NOTIFY_WS_DATA %}
+<style>
+  #order-notify {
+    position: fixed;
+    top: -80px;
+    left: 0; right: 0;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    padding: .6rem 1rem 0;
+    pointer-events: none;
+    transition: top .3s cubic-bezier(.4,0,.2,1);
+  }
+  #order-notify.show { top: 0; }
+  #order-notify-inner {
+    pointer-events: all;
+    background: #1a1a2e;
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.2);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem 1rem .7rem 1.1rem;
+    max-width: 460px;
+    width: 100%;
+    cursor: pointer;
+  }
+  #order-notify-inner:hover { background: #16213e; }
+  .n-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #e63946; flex-shrink: 0;
+    animation: ndot 1.2s infinite;
+  }
+  @keyframes ndot { 0%,100%{opacity:1} 50%{opacity:.3} }
+  #order-notify-text { font-size: .84rem; font-weight: 600; flex: 1; }
+  #order-notify-cta {
+    font-size: .72rem; font-weight: 700; color: #e63946;
+    background: rgba(230,57,70,.13); border-radius: 6px;
+    padding: .22rem .6rem; white-space: nowrap; flex-shrink: 0;
+  }
+  #order-notify-close {
+    background: none; border: none; color: #9aa0b4;
+    font-size: .8rem; line-height: 1; padding: 0; cursor: pointer; flex-shrink: 0;
+  }
+  #order-notify-close:hover { color: #fff; }
+</style>
+
+<div id="order-notify">
+  <div id="order-notify-inner">
+    <span class="n-dot"></span>
+    <span id="order-notify-text"></span>
+    <span id="order-notify-cta">View Orders &rarr;</span>
+    <button id="order-notify-close" onclick="event.stopPropagation();_notifyHide()">&#x2715;</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const _data  = {{ NOTIFY_WS_DATA|safe }};
+  const _wrap  = document.getElementById('order-notify');
+  const _text  = document.getElementById('order-notify-text');
+  const _inner = document.getElementById('order-notify-inner');
+  let _timer   = null;
+
+  window._notifyHide = function() {
+    _wrap.classList.remove('show');
+    clearTimeout(_timer);
+  };
+
+  function _show(msg, url) {
+    _text.textContent = msg;
+    _inner.onclick = function() { window.location = url; };
+    _wrap.classList.add('show');
+    clearTimeout(_timer);
+    _timer = setTimeout(_notifyHide, 8000);
+  }
+
+  function _connect(rid, url) {
+    const ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/order/' + rid + '/');
+    ws.onmessage = function(e) {
+      const d = JSON.parse(e.data);
+      if (d.status !== 'PENDING') return;
+      _show('New order from Table #' + (d.table ? d.table.number : ''), url);
+    };
+    ws.onclose = function() { setTimeout(function() { _connect(rid, url); }, 3000); };
+  }
+
+  _data.forEach(function(item) { _connect(item.rid, item.url); });
+})();
+</script>
+{% endif %}
 
 </body>
 </html>

@@ -61,7 +61,7 @@ def attach_qr(text: str):
     QRcode = qrcode.QRCode(
         error_correction=qrcode.constants.ERROR_CORRECT_H,
     )
-    QRcode.add_data(f"{qr_base_url}{text}")
+    QRcode.add_data(f"{qr_base_url}{text}/")
     QRcode.make(fit=True)
     QRimg = QRcode.make_image(
         image_factory=StyledPilImage,

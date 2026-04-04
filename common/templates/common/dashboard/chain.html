@@ -1,0 +1,112 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}Dashboard | Waiter{% endblock %}
+
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+
+<div class="page-wrap">
+  <div class="container">
+
+    <div class="page-top">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Chain: <strong>{{ user_profile.chain.name }}</strong></div>
+      </div>
+      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-restaurant">
+        <i class="fas fa-plus"></i> Add Restaurant
+      </button>
+    </div>
+
+    {% if not restaurants %}
+      {% include 'common/partials/empty.html' with title="No Restaurants" text="Add your first restaurant to get started." icon="fas fa-store-slash" %}
+    {% else %}
+    <div class="row g-3">
+      {% for r in restaurants %}
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="rest-card">
+          <div class="rest-card-head">
+            <a href="{% url 'common:dashboard-restaurant' r.uid %}" class="d-flex align-items-center gap-2">
+              <div class="rest-avatar"><i class="fas fa-store"></i></div>
+              <div>
+                <div class="rest-name">{{ r.name }}</div>
+                <div class="rest-chain">{{ user_profile.chain.name }}</div>
+              </div>
+            </a>
+            <div class="rest-actions">
+              <button class="icon-btn edit" title="Edit"
+                data-bs-toggle="modal" data-bs-target="#modal-restaurant"
+                data-uid="{{ r.uid }}" data-name="{{ r.name }}">
+                <i class="fas fa-pen"></i>
+              </button>
+              <form method="post" action="{% url 'common:restaurant-delete' r.uid %}" class="d-inline"
+                onsubmit="return confirm('Delete {{ r.name }}?')">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn del" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          <div class="rest-stats">
+            <a href="{% url 'common:dashboard-restaurant' r.uid %}#tables" class="stat-btn tables">
+              <span class="stat-num">{{ r.table_count }}</span>
+              <span class="stat-lbl">Tables</span>
+            </a>
+            <a href="{% url 'common:dashboard-restaurant' r.uid %}#categories" class="stat-btn cats">
+              <span class="stat-num">{{ r.category_count }}</span>
+              <span class="stat-lbl">Categories</span>
+            </a>
+            <a href="{% url 'common:dashboard-order' r.uid %}" class="stat-btn orders">
+              <span class="stat-num">{{ r.order_count }}</span>
+              <span class="stat-lbl">Orders</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Restaurant Modal -->
+<div class="modal fade" id="modal-restaurant" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'common:restaurant-create' %}" class="modal-content">
+      {% csrf_token %}
+      <input type="hidden" name="uid" id="r-uid">
+      <div class="modal-header">
+        <h5 class="modal-title" id="r-modal-title">Add Restaurant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" id="r-name" class="form-control" placeholder="Restaurant name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Chain</label>
+          <input type="text" class="form-control" value="{{ user_profile.chain.name }}" disabled>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  document.getElementById('modal-restaurant').addEventListener('show.bs.modal', function(e) {
+    const b = e.relatedTarget;
+    document.getElementById('r-uid').value = b?.dataset.uid ?? '';
+    document.getElementById('r-name').value = b?.dataset.name ?? '';
+    document.getElementById('r-modal-title').textContent = b?.dataset.uid ? 'Edit Restaurant' : 'Add Restaurant';
+  });
+</script>
+{% endblock %}

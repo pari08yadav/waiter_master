@@ -1,9 +1,177 @@
-# # Standard Library
+# # # Standard Library
+# from django.contrib.auth.models import User
+# from django.core.exceptions import ValidationError
+# from django.core.files.images import ImageFile
+# from django.db.models import (
+#     PROTECT,
+#     BooleanField,
+#     CharField,
+#     DecimalField,
+#     ForeignKey,
+#     ImageField,
+#     JSONField,
+#     OneToOneField,
+#     PositiveIntegerField,
+#     TextField,
+#     UUIDField,
+# )
+
+# from common.abstract_models import CreateUpdate
+# from common.model_helpers import attach_qr
+# from common.storage_backends import PublicMediaStorage
+# from common.taxonomies import MenuType, OrderStatus, PriceType
+
+
+# class Chain(CreateUpdate):
+#     name = CharField(max_length=512)
+
+#     def __str__(self):
+#         return f"{self.name}"
+
+
+# class UserProfile(CreateUpdate):
+#     user = OneToOneField(to=User, on_delete=PROTECT)
+#     chain = ForeignKey(Chain, on_delete=PROTECT)
+#     is_guest = BooleanField(default=False)
+
+#     def __str__(self):
+#         return f"{self.full_name} / {self.user}"
+
+#     @property
+#     def full_name(self):
+#         return self.user.get_full_name()
+
+
+# class Restaurant(CreateUpdate):
+#     name = CharField(max_length=512)
+#     chain = ForeignKey(Chain, on_delete=PROTECT)
+
+#     @property
+#     def table_count(self):
+#         return self.table_set.count()
+
+#     @property
+#     def category_count(self):
+#         return self.category_set.count()
+
+#     def __str__(self):
+#         return f"{self.name} / {self.chain}"
+
+
+# class Table(CreateUpdate):
+#     number = PositiveIntegerField(default=0)
+#     restaurant = ForeignKey(Restaurant, on_delete=PROTECT)
+#     qr_code = ImageField()
+#     qr_code_response = JSONField(default=dict, blank=True)
+
+#     def qr_code_url(self):
+#         return self.qr_code_response.get("secure_url", None)
+
+#     def __str__(self):
+        
+#         return f"{self.number} / {self.restaurant}"
+
+#     # def save(self, **kwargs):
+#     #     if not self.qr_code:
+#     #         self.qr_code = ImageFile(
+#     #             attach_qr(self.uid), name=f"QR_{self.uid}.png"
+#     #         )
+#     #     super(Table, self).save(**kwargs)
+
+#     def save(self, *args, **kwargs):
+#         if not self.qr_code:
+#             qr_bytes = attach_qr(self.uid).getvalue()
+#             file_name = f"QR_{self.uid}.png"
+
+#             self.qr_code.save(file_name, ContentFile(qr_bytes), save=False)
+
+#         super().save(*args, **kwargs)
+
+
+# class Category(CreateUpdate):
+#     name = CharField(max_length=512)
+#     restaurant = ForeignKey(Restaurant, on_delete=PROTECT)
+#     image = ImageField(blank=True, null=True, storage=PublicMediaStorage())
+
+#     def __str__(self):
+#         return f"{self.name} / {self.restaurant}"
+
+#     class Meta:
+#         verbose_name_plural = "Categories"
+
+
+# class MenuItem(CreateUpdate):
+#     name = CharField(max_length=512)
+#     image = ImageField(blank=True, null=True, storage=PublicMediaStorage())
+#     category = ForeignKey(Category, on_delete=PROTECT)
+#     menu_type = CharField(
+#         max_length=8, choices=MenuType.choices, default=MenuType.VEG
+#     )
+#     available = BooleanField(default=True)
+#     half_price = DecimalField(max_digits=10, decimal_places=2, default=0)
+#     full_price = DecimalField(max_digits=10, decimal_places=2, default=0)
+#     description = TextField(blank=True)
+#     ingredients = TextField(blank=True)
+
+#     def __str__(self):
+#         return f"{self.name} / {self.category}"
+
+
+# class Order(CreateUpdate):
+#     session_uid = UUIDField()
+#     table = ForeignKey(Table, on_delete=PROTECT)
+#     status = CharField(
+#         choices=OrderStatus.choices, default=OrderStatus.PENDING, max_length=32
+#     )
+
+#     @property
+#     def status_display(self):
+#         return self.get_status_display()
+
+#     @property
+#     def total_price(self):
+#         return sum(i.total_price for i in self.orderitem_set.all())
+
+#     def __str__(self):
+#         return f"{self.table} / {self.status}"
+
+
+# class OrderItem(CreateUpdate):
+#     order = ForeignKey(Order, on_delete=PROTECT)
+#     menu_item = ForeignKey(MenuItem, on_delete=PROTECT)
+#     price_type = CharField(
+#         choices=PriceType.choices, default=PriceType.FULL, max_length=8
+#     )
+#     quantity = PositiveIntegerField()
+
+#     @property
+#     def price(self):
+#         return (
+#             self.menu_item.full_price
+#             if self.price_type == PriceType.FULL
+#             else self.menu_item.half_price
+#         )
+
+#     @property
+#     def total_price(self):
+#         return self.price * self.quantity
+
+#     def __str__(self):
+#         return f"{self.order} / {self.menu_item} / {self.quantity}"
+
+#     def clean(self):
+#         if self.order.table.restaurant != self.menu_item.category.restaurant:
+#             raise ValidationError({"table": "Table not found."})
+
+
+
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.files.images import ImageFile
+from django.core.files.base import ContentFile
+from django.db import models
 from django.db.models import (
-    PROTECT,
     BooleanField,
     CharField,
     DecimalField,
@@ -30,8 +198,8 @@ class Chain(CreateUpdate):
 
 
 class UserProfile(CreateUpdate):
-    user = OneToOneField(to=User, on_delete=PROTECT)
-    chain = ForeignKey(Chain, on_delete=PROTECT)
+    user = OneToOneField(to=User, on_delete=models.CASCADE)
+    chain = ForeignKey(Chain, on_delete=models.CASCADE)
     is_guest = BooleanField(default=False)
 
     def __str__(self):
@@ -44,7 +212,7 @@ class UserProfile(CreateUpdate):
 
 class Restaurant(CreateUpdate):
     name = CharField(max_length=512)
-    chain = ForeignKey(Chain, on_delete=PROTECT)
+    chain = ForeignKey(Chain, on_delete=models.CASCADE)
 
     @property
     def table_count(self):
@@ -60,8 +228,8 @@ class Restaurant(CreateUpdate):
 
 class Table(CreateUpdate):
     number = PositiveIntegerField(default=0)
-    restaurant = ForeignKey(Restaurant, on_delete=PROTECT)
-    qr_code = ImageField(storage=PublicMediaStorage())
+    restaurant = ForeignKey(Restaurant, on_delete=models.CASCADE)
+    qr_code = ImageField(upload_to="")
     qr_code_response = JSONField(default=dict, blank=True)
 
     def qr_code_url(self):
@@ -70,17 +238,20 @@ class Table(CreateUpdate):
     def __str__(self):
         return f"{self.number} / {self.restaurant}"
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         if not self.qr_code:
-            self.qr_code = ImageFile(
-                attach_qr(self.uid), name=f"QR_{self.uid}.png"
-            )
-        super(Table, self).save(**kwargs)
+            qr_bytes = attach_qr(self.uid).getvalue()
+            file_name = f"QR_{self.uid}.png"
+            self.qr_code.save(file_name, ContentFile(qr_bytes), save=False)
+            # ADD THIS LINE TO DEBUG:
+            print(f"DEBUG: File saved at {self.qr_code.path}") 
+
+        super().save(*args, **kwargs)
 
 
 class Category(CreateUpdate):
     name = CharField(max_length=512)
-    restaurant = ForeignKey(Restaurant, on_delete=PROTECT)
+    restaurant = ForeignKey(Restaurant, on_delete=models.CASCADE)
     image = ImageField(blank=True, null=True, storage=PublicMediaStorage())
 
     def __str__(self):
@@ -93,7 +264,7 @@ class Category(CreateUpdate):
 class MenuItem(CreateUpdate):
     name = CharField(max_length=512)
     image = ImageField(blank=True, null=True, storage=PublicMediaStorage())
-    category = ForeignKey(Category, on_delete=PROTECT)
+    category = ForeignKey(Category, on_delete=models.CASCADE)
     menu_type = CharField(
         max_length=8, choices=MenuType.choices, default=MenuType.VEG
     )
@@ -109,7 +280,7 @@ class MenuItem(CreateUpdate):
 
 class Order(CreateUpdate):
     session_uid = UUIDField()
-    table = ForeignKey(Table, on_delete=PROTECT)
+    table = ForeignKey(Table, on_delete=models.CASCADE)  # 🔥 key change
     status = CharField(
         choices=OrderStatus.choices, default=OrderStatus.PENDING, max_length=32
     )
@@ -127,8 +298,8 @@ class Order(CreateUpdate):
 
 
 class OrderItem(CreateUpdate):
-    order = ForeignKey(Order, on_delete=PROTECT)
-    menu_item = ForeignKey(MenuItem, on_delete=PROTECT)
+    order = ForeignKey(Order, on_delete=models.CASCADE)  # 🔥 key change
+    menu_item = ForeignKey(MenuItem, on_delete=models.CASCADE)
     price_type = CharField(
         choices=PriceType.choices, default=PriceType.FULL, max_length=8
     )
