@@ -105,6 +105,60 @@
   .s-tab:hover { background: #e8eaf0; color: #1a1a2e; }
   .s-tab.active { background: #e63946; color: #fff; border-color: #e63946; }
   .status-tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .staff-chat-fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.25rem;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,.3);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .staff-chat-window {
+    position: fixed;
+    bottom: 6rem;
+    right: 1.25rem;
+    width: 340px;
+    max-height: 450px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.15);
+    z-index: 998;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .staff-chat-header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: white;
+    padding: .75rem 1rem;
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  .staff-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: .75rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    max-height: 300px;
+  }
+  .staff-chat-msg { padding: .5rem .75rem; border-radius: 12px; font-size: .82rem; max-width: 85%; line-height: 1.5; }
+  .staff-chat-msg.user { background: #e8eaf0; color: #1a1a2e; align-self: flex-end; }
+  .staff-chat-msg.bot { background: #f8f9fc; color: #1a1a2e; align-self: flex-start; }
+  .staff-chat-input-row { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid #f1f3f8; }
+  .staff-chat-input-row input { flex: 1; border-radius: 50px; border: 1.5px solid #e8eaf0; padding: .4rem .9rem; font-size: .82rem; }
+  .staff-chat-input-row button { border-radius: 50px; padding: .4rem .9rem; font-size: .82rem; }
 </style>
 {% endblock %}
 
@@ -245,6 +299,27 @@
     </div>
   </div>
 </div>
+<!-- Staff AI Chat FAB -->
+<button class="staff-chat-fab" onclick="toggleStaffChat()" title="AI Assistant">
+  <i class="fas fa-robot"></i>
+</button>
+
+<!-- Staff Chat Window -->
+<div class="staff-chat-window" id="staff-chat-window">
+  <div class="staff-chat-header">
+    <i class="fas fa-robot me-2"></i>Staff Assistant
+  </div>
+  <div class="staff-chat-messages" id="staff-chat-messages">
+    <div class="staff-chat-msg bot">Hi! Ask me about orders — pending count, summaries, or update a status.</div>
+  </div>
+  <div class="staff-chat-input-row">
+    <input type="text" id="staff-chat-input" placeholder="Ask about orders..."
+      onkeydown="if(event.key==='Enter') sendStaffChat()">
+    <button class="btn btn-dark btn-sm" onclick="sendStaffChat()">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
 {% endblock %}
 
 {% block script %}
@@ -309,5 +384,37 @@
     ws.onmessage = e => onMessage(JSON.parse(e.data));
   }
   connect();
+
+  function toggleStaffChat() {
+    const w = document.getElementById('staff-chat-window');
+    w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+  }
+
+  async function sendStaffChat() {
+    const input = document.getElementById('staff-chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    const messages = document.getElementById('staff-chat-messages');
+    messages.innerHTML += `<div class="staff-chat-msg user">${msg}</div>`;
+    const typingId = 'staff-typing-' + Date.now();
+    messages.innerHTML += `<div class="staff-chat-msg bot" id="${typingId}">Thinking...</div>`;
+    messages.scrollTop = messages.scrollHeight;
+    try {
+      const r = await fetch(`/dashboard/restaurant/${RID}/agent/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || ''
+        },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await r.json();
+      document.getElementById(typingId).textContent = data.reply || 'Sorry, could not process that.';
+    } catch {
+      document.getElementById(typingId).textContent = 'Something went wrong. Please try again.';
+    }
+    messages.scrollTop = messages.scrollHeight;
+  }
 </script>
 {% endblock %}

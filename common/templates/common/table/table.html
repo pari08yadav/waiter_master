@@ -4,39 +4,37 @@
 
 {% block extra_head %}
 <style>
-  body { background: var(--surface-2); }
+  body { background: #f8fafc; }
   .table-header {
-    background: rgba(255,255,255,.92);
+    background: rgba(255,255,255,.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid #e2e8f0;
     padding: .85rem 0;
     position: sticky;
     top: 0;
     z-index: 50;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 1px 8px rgba(0,0,0,.06);
   }
-  .restaurant-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .restaurant-name { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
   .table-badge {
     display: inline-flex;
     align-items: center;
     gap: .4rem;
-    background: var(--red-subtle);
-    color: var(--red);
+    background: #fff0f0;
+    color: #e63946;
     font-size: .75rem;
     font-weight: 600;
     padding: .25rem .75rem;
     border-radius: 50px;
   }
-  .cat-sidebar { padding: 1.25rem 0; }
-  .cat-sidebar-title { font-size: .7rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); padding: 0 .75rem; margin-bottom: .75rem; }
   .section-cat-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text);
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
     padding: .5rem 0;
     margin-bottom: .75rem;
-    border-bottom: 2px solid var(--border);
+    border-bottom: 2px solid #f1f5f9;
     display: flex;
     align-items: center;
     gap: .5rem;
@@ -45,7 +43,7 @@
     content: '';
     width: 4px;
     height: 20px;
-    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    background: linear-gradient(135deg, #e63946, #c1121f);
     border-radius: 2px;
     flex-shrink: 0;
   }
@@ -53,36 +51,165 @@
     display: flex;
     gap: 1rem;
     padding: 1rem;
-    border-radius: var(--radius);
-    transition: var(--transition);
-    margin-bottom: .5rem;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    border: 1px solid #f1f5f9;
+    transition: all .2s ease;
+    margin-bottom: .75rem;
   }
-  .menu-card:hover { background: var(--red-subtle); }
+  .menu-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,.09);
+    border-color: #fecdd3;
+  }
   .menu-card-img {
-    width: 90px;
-    height: 90px;
+    width: 85px;
+    height: 85px;
     object-fit: cover;
-    border-radius: var(--radius-sm);
+    border-radius: 10px;
     flex-shrink: 0;
   }
   .menu-card-body { flex: 1; min-width: 0; }
-  .menu-card-name { font-size: .95rem; font-weight: 600; color: var(--text); margin-bottom: .2rem; }
-  .menu-card-price { font-size: .9rem; font-weight: 700; color: var(--red); margin-bottom: .3rem; }
-  .menu-card-desc { font-size: .78rem; color: var(--text-3); line-height: 1.5; }
-  .veg-dot { width: 18px; height: 18px; border: 2px solid #15803d; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .veg-dot i { font-size: .5rem; color: #15803d; }
-  .nonveg-dot { width: 18px; height: 18px; border: 2px solid #dc2626; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .nonveg-dot i { font-size: .5rem; color: #dc2626; }
+  .menu-card-name { font-size: .92rem; font-weight: 700; color: #1e293b; margin-bottom: .2rem; }
+  .menu-card-price { font-size: .88rem; font-weight: 800; color: #e63946; margin-bottom: .3rem; }
+  .menu-card-desc { font-size: .75rem; color: #64748b; line-height: 1.5; }
+  .veg-dot { width: 16px; height: 16px; border: 2px solid #15803d; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .veg-dot i { font-size: .45rem; color: #15803d; }
+  .nonveg-dot { width: 16px; height: 16px; border: 2px solid #dc2626; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nonveg-dot i { font-size: .45rem; color: #dc2626; }
   .mobile-cart-bar {
-    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    background: linear-gradient(135deg, #e63946, #c1121f);
     padding: 1rem 1.25rem;
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 20px rgba(230,57,70,.35);
   }
   .search-wrap { position: relative; margin-bottom: 1.5rem; }
-  .search-wrap .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
-  .search-wrap input { padding-left: 2.75rem; border-radius: 50px; background: var(--surface); border: 1.5px solid var(--border); }
-  .search-wrap input:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-glow); }
+  .search-wrap .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+  .search-wrap input { padding-left: 2.75rem; border-radius: 50px; background: #fff; border: 1.5px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .search-wrap input:focus { border-color: #e63946; box-shadow: 0 0 0 3px rgba(230,57,70,.1); outline: none; }
+  .cat-section {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    border: 1px solid #f1f5f9;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    overflow-y: auto;
+    max-height: 480px;
+  }
+  .cat-section::-webkit-scrollbar { width: 4px; }
+  .cat-section::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+  /* ── Cart Sidebar ── */
+  .cart-sidebar {
+    position: sticky;
+    top: 80px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    border: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 100px);
+    overflow: hidden;
+  }
+  .cart-sidebar-head {
+    padding: 1rem 1.1rem .75rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 800;
+    font-size: .95rem;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cart-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: .75rem 1rem;
+    min-height: 0;
+  }
+  .cart-sidebar-body::-webkit-scrollbar { width: 4px; }
+  .cart-sidebar-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+  .cart-item-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 0;
+    border-bottom: 1px solid #f8fafc;
+    font-size: .8rem;
+  }
+  .cart-item-row:last-child { border-bottom: none; }
+  .cart-item-name { flex: 1; font-weight: 600; color: #1e293b; }
+  .cart-item-price { font-weight: 700; color: #e63946; font-size: .78rem; }
+  .cart-sidebar-footer {
+    padding: .85rem 1.1rem;
+    border-top: 1px solid #f1f5f9;
+  }
+  .cart-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+    font-size: .82rem;
+  }
+  @media (max-width: 767px) {
+    .cart-sidebar { display: none; }
+    .mobile-cart-bar { display: flex !important; }
+  }
+  .chat-fab {
+    position: fixed;
+    bottom: 5rem;
+    right: 1.25rem;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(230,57,70,.4);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .chat-window {
+    position: fixed;
+    bottom: 9rem;
+    right: 1.25rem;
+    width: 320px;
+    max-height: 420px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.15);
+    z-index: 998;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chat-header {
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    color: white;
+    padding: .75rem 1rem;
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: .75rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    max-height: 280px;
+  }
+  .chat-msg { padding: .5rem .75rem; border-radius: 12px; font-size: .82rem; max-width: 85%; line-height: 1.5; }
+  .chat-msg.user { background: var(--red-subtle); color: var(--text); align-self: flex-end; }
+  .chat-msg.bot { background: var(--surface-2); color: var(--text); align-self: flex-start; }
+  .chat-input-row { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid var(--border); }
+  .chat-input-row input { flex: 1; border-radius: 50px; border: 1.5px solid var(--border); padding: .4rem .9rem; font-size: .82rem; }
+  .chat-input-row button { border-radius: 50px; padding: .4rem .9rem; font-size: .82rem; }
 </style>
 {% endblock %}
 
@@ -109,22 +236,8 @@
 
 <div class="container py-4">
   <div class="row g-4">
-    <!-- Sidebar -->
-    <!-- <div class="col-md-3 d-none d-md-block sticky-sidebar">
-      <div class="cat-sidebar">
-        <div class="cat-sidebar-title">Menu</div>
-        {% for entry in category_data %}
-        <button class="cat-nav-btn" id="nav-{{ entry.category.uid }}"
-          onclick="scrollToCategory('{{ entry.category.uid }}')">
-          {{ entry.category.name }}
-          <span style="float:right;font-size:.72rem;color:var(--text-3);">{{ entry.menu_items|length }}</span>
-        </button>
-        {% endfor %}
-      </div>
-    </div> -->
-
-    <!-- Main -->
-    <main class="col-md-9">
+    <!-- Menu Main -->
+    <main class="col-md-8 col-lg-9">
       <!-- Search -->
       <div class="search-wrap">
         <i class="fas fa-search search-icon"></i>
@@ -136,7 +249,7 @@
         {% include 'common/partials/empty.html' with title="No Menu Available" text="This restaurant hasn't added any items yet." icon="fas fa-utensils" %}
       {% else %}
         {% for entry in category_data %}
-        <section id="category-{{ entry.category.uid }}" class="mb-5">
+        <section id="category-{{ entry.category.uid }}" class="mb-4 cat-section">
           <div class="section-cat-title">{{ entry.category.name }}</div>
           {% for item in entry.menu_items %}
           <div class="menu-card">
@@ -185,11 +298,39 @@
         {% endfor %}
       {% endif %}
     </main>
+
+    <!-- Cart Sidebar -->
+    <div class="col-md-4 col-lg-3 d-none d-md-block">
+      <div class="cart-sidebar">
+        <div class="cart-sidebar-head">
+          <span><i class="fas fa-shopping-cart me-2" style="color:#e63946;"></i>Your Cart</span>
+          <span class="badge" style="background:#fff0f0;color:#e63946;font-size:.72rem;" id="cart-count">0</span>
+        </div>
+        <div class="cart-sidebar-body" id="cart-sidebar-body">
+          <div class="cart-empty-state" id="cart-empty">
+            <i class="fas fa-shopping-basket" style="font-size:2rem;margin-bottom:.5rem;display:block;"></i>
+            Add items to get started
+          </div>
+        </div>
+        <div class="cart-sidebar-footer d-none" id="cart-sidebar-footer">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span style="font-size:.82rem;color:#64748b;">Total</span>
+            <span style="font-weight:800;color:#e63946;font-size:1rem;" id="cart-grand-total"></span>
+          </div>
+          <button class="btn w-100" style="background:linear-gradient(135deg,#e63946,#c1121f);color:#fff;font-weight:700;border-radius:10px;" onclick="placeOrder()">
+            <i class="fas fa-check me-2"></i>Place Order
+          </button>
+          <a href="{% url 'common:table-order' table.uid %}" class="btn w-100 mt-2" style="background:#f1f5f9;color:#1e293b;font-size:.82rem;border-radius:10px;">
+            <i class="fas fa-bowl-food me-1"></i>My Orders
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- Mobile Cart Bar -->
-<div class="fixed-bottom d-sm-none d-none mobile-cart-bar" id="mobile-bar" style="z-index:40;">
+<div class="fixed-bottom d-md-none d-none mobile-cart-bar" id="mobile-bar" style="z-index:40;">
   <div class="d-flex justify-content-between align-items-center gap-3">
     <span class="fw-semibold text-white" id="mobile-total-label" style="font-size:.9rem;"></span>
     <div class="d-flex gap-2">
@@ -247,6 +388,24 @@
     </div>
   </div>
 </div>
+<!-- AI Chat FAB -->
+<button class="chat-fab" onclick="toggleChat()" title="Ask AI Assistant">
+  <i class="fas fa-robot"></i>
+</button>
+
+<!-- Chat Window -->
+<div class="chat-window" id="chat-window">
+  <div class="chat-header">
+    <i class="fas fa-robot me-2"></i>Ask me anything about the menu!
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg bot">Hi! I can help you find dishes, check ingredients, or track your order. What would you like?</div>
+  </div>
+  <div class="chat-input-row">
+    <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChat()">
+    <button class="btn btn-primary btn-sm" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
 {% endblock %}
 
 {% block script %}
@@ -293,16 +452,46 @@
     const cart = getCart();
     const total = Object.values(cart).reduce((s,i) => s + i.quantity * parseFloat(i.price), 0);
     const count = Object.values(cart).reduce((s,i) => s + i.quantity, 0);
-    const cb = document.getElementById('cart-btn'), mb = document.getElementById('mobile-bar');
+    const mb = document.getElementById('mobile-bar');
+    const sidebarFooter = document.getElementById('cart-sidebar-footer');
+    const cartEmpty = document.getElementById('cart-empty');
+    // update sidebar
+    renderSidebarCart();
     if (total > 0) {
-      cb.classList.remove('d-none');
-      document.getElementById('cart-total-label').textContent = fmt(total);
+      sidebarFooter.classList.remove('d-none');
+      cartEmpty.classList.add('d-none');
+      document.getElementById('cart-grand-total').textContent = fmt(total);
       mb.classList.remove('d-none'); mb.classList.add('d-flex');
       document.getElementById('mobile-total-label').textContent = count + ' item' + (count>1?'s':'') + ' · ' + fmt(total);
     } else {
-      cb.classList.add('d-none'); mb.classList.add('d-none'); mb.classList.remove('d-flex');
+      sidebarFooter.classList.add('d-none');
+      cartEmpty.classList.remove('d-none');
+      mb.classList.add('d-none'); mb.classList.remove('d-flex');
     }
     document.getElementById('cart-count').textContent = count;
+  }
+
+  function renderSidebarCart() {
+    const cart = getCart(), entries = Object.entries(cart);
+    const body = document.getElementById('cart-sidebar-body');
+    if (!entries.length) {
+      body.innerHTML = '<div class="cart-empty-state" id="cart-empty"><i class="fas fa-shopping-basket" style="font-size:2rem;margin-bottom:.5rem;display:block;"></i>Add items to get started</div>';
+      return;
+    }
+    body.innerHTML = entries.map(([key, item]) => {
+      const [uid, pt] = key.split('/');
+      const lt = item.quantity * parseFloat(item.price);
+      const name = item.name || uid;
+      return `<div class="cart-item-row">
+        <div class="cart-item-name">${name}<br><span style="font-size:.7rem;color:#94a3b8;">${pt.charAt(0)+pt.slice(1).toLowerCase()}</span></div>
+        <div class="d-flex align-items-center gap-1">
+          <button class="btn btn-outline-danger btn-sm" style="padding:.1rem .4rem;font-size:.7rem;" onclick="cartRm('${uid}','${pt}')"><i class="fas fa-minus"></i></button>
+          <span style="min-width:18px;text-align:center;font-size:.78rem;font-weight:700;">${item.quantity}</span>
+          <button class="btn btn-danger btn-sm" style="padding:.1rem .4rem;font-size:.7rem;" onclick="cartAdd('${uid}','${pt}',${item.price},'${name.replace(/'/g,"\\'")}')"><i class="fas fa-plus"></i></button>
+        </div>
+        <div class="cart-item-price">${fmt(lt)}</div>
+      </div>`;
+    }).join('');
   }
 
   let pendingItem = null, priceTypeModal = null;
@@ -435,5 +624,33 @@
 
   document.querySelectorAll('.cart-btn-group').forEach(g => updateCartBtns(g.dataset.uid));
   updateCartUI();
+
+  function toggleChat() {
+    const w = document.getElementById('chat-window');
+    w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    const messages = document.getElementById('chat-messages');
+    messages.innerHTML += `<div class="chat-msg user">${msg}</div>`;
+    messages.innerHTML += `<div class="chat-msg bot" id="typing">Typing...</div>`;
+    messages.scrollTop = messages.scrollHeight;
+    try {
+      const r = await fetch(`/table/${TABLE_UID}/chat/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await r.json();
+      document.getElementById('typing').textContent = data.reply || 'Sorry, I could not understand that.';
+    } catch {
+      document.getElementById('typing').textContent = 'Something went wrong. Please try again.';
+    }
+    messages.scrollTop = messages.scrollHeight;
+  }
 </script>
 {% endblock %}

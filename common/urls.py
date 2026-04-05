@@ -1,6 +1,6 @@
 from django.urls import path, re_path
 from rest_framework.routers import DefaultRouter
-
+from agent.views import AgentChatView, StaffAgentChatView
 from common import views
 
 router = DefaultRouter()
@@ -40,6 +40,12 @@ urlpatterns = [
     # Table (customer)
     path("table/<uuid:table_uid>/", views.TableMenuPage.as_view(), name="table"),
     path("table/<uuid:table_uid>/order/", views.TableOrderPage.as_view(), name="table-order"),
+
+    # Agent chat
+    path("table/<uuid:table_uid>/chat/", AgentChatView.as_view(), name="agent-chat"),
+    path("dashboard/restaurant/<uuid:uid>/agent/", StaffAgentChatView.as_view(), name="staff-agent-chat"),
+
+
 
     re_path("", views.HomePage.as_view(), name="home"),
 ]
