@@ -1,11 +1,5 @@
 
-# 🍽️ Waiter
 
-A contactless restaurant ordering system with a built-in GenAI agent. Customers scan a QR code on their table, browse the menu, place an order, and track it live — all from their phone. Staff see new orders instantly on their dashboard and can manage them via an AI assistant.
-
-🔗 Live Demo: [waiterrr.onrender.com](https://waiterrr.onrender.com/)
-
----
 
 ## How it works
 
@@ -230,8 +224,3 @@ For full AI implementation details see [AI_DOCUMENTATION.md](./AI_DOCUMENTATION.
 - Switch to Qdrant vector search — when menu grows beyond 500+ items for efficient semantic search
 
 ---
-
-## Documentation
-
-- For architecture, models, WebSocket flow and API endpoints see [DOCUMENTATION.md](./DOCUMENTATION.md)
-- For AI agent structure, flow, tools and automation details see [AI_DOCUMENTATION.md](./AI_DOCUMENTATION.md)
