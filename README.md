@@ -32,7 +32,7 @@ Customers scan a table QR code, browse the menu, place orders, and track status 
 
 ## Python version (important)
 
-This repo is easiest to run on **Python 3.11** (also a good match for most cloud hosts).
+This repo is easiest to run on **Python 3.11**.
 
 If you use **Python 3.13**, you may hit extra native build issues for some packages. If installs fail, switch your venv to **3.11** and reinstall.
 
@@ -175,38 +175,6 @@ Open: `http://127.0.0.1:8000`
 
 ---
 
-## Deploying (Render, no logic changes)
-
-Create a **Web Service** and use:
-
-**Build command**
-
-```bash
-pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-```
-
-**Start command (ASGI + WebSockets)**
-
-```bash
-daphne -b 0.0.0.0 -p $PORT waiter.asgi:application
-```
-
-**Environment variables (minimum)**
-
-- `DJANGO_SECRET_KEY`
-- `DEBUG=False`
-- `ALLOWED_HOSTS=<your-app>.onrender.com`
-- `CSRF_TRUSTED_ORIGINS=https://<your-app>.onrender.com`
-- `BASE_URL=https://<your-app>.onrender.com`
-- `GEMINI_API_KEY` (if you use AI chat)
-- `QDRANT_URL` (point to Qdrant Cloud / your hosted Qdrant)
-
-**Database note**
-
-The repo defaults to **SQLite** for local convenience. For production reliability on Render, use **managed Postgres** and point Django at it (small settings/config change only).
-
----
-
 ## Environment Variables
 
 | Variable | Required | Description |
@@ -265,6 +233,16 @@ On order creation/status change:
 
 Important: chat history in session is stored in JSON-safe format only.
 
+---
+
+## Validation Checklist
+
+Run before merging:
+
+```bash
+python3 manage.py check
+python3 manage.py test
+```
 
 Manual smoke checks:
 
@@ -291,9 +269,6 @@ Manual smoke checks:
 - Qdrant storage artifacts accidentally tracked  
   Keep `qdrant_storage/` ignored in git.
 
-- Production caution  
-  In-memory channel layer is not suitable for multi-process deployment; use Redis channel layer in production.
-
 ---
 
 ## Migration Status
@@ -304,4 +279,10 @@ Manual smoke checks:
 
 ---
 
+## Additional Docs
 
+- Optional deeper write-up (includes production-oriented notes): [PRODUCTION_GUIDE.md](./PRODUCTION_GUIDE.md)
+- If you want to quickly understand what the project does and how it works end-to-end, start with:
+  - `PRODUCTION_GUIDE.md` -> "What we are building"
+  - `PRODUCTION_GUIDE.md` -> "How the system works end-to-end"
+  - `PRODUCTION_GUIDE.md` -> "Ownership and Change Map"
