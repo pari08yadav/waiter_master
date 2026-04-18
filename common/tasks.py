@@ -1,32 +1,5 @@
-import json
+"""Compatibility facade for legacy common.tasks imports."""
 
-from django.db import transaction
-from loguru import logger
+from restaurants.tasks import import_menu_items
 
-from common.models import Category, MenuItem
-
-
-def import_menu_items(restaurant_id):
-    if not restaurant_id:
-        raise ValueError("No restaurant id was passed!!")
-    with open("./fixtures/menu.json") as f:
-        data = json.load(f)
-        with transaction.atomic():
-            for category_row in data:
-                category = Category.objects.create(
-                    name=category_row["category"],
-                    restaurant_id=restaurant_id,
-                )
-                for item in category_row["items"]:
-                    MenuItem.objects.create(
-                        name=item["name"],
-                        full_price=item["full_price"],
-                        category=category,
-                        description=item.get("description", ""),
-                        ingredients=", ".join(
-                            item.get("ingredients", [])
-                        ).title(),
-                    )
-                    logger.info(
-                        f"{item['name']} of category {category.name} is generated."
-                    )
+__all__ = ["import_menu_items"]

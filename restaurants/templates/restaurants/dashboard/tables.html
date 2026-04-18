@@ -1,0 +1,74 @@
+{% extends 'common/base.html' %}
+{% load static %}
+{% block title %}Tables — {{ restaurant.name }} | Waiter{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'restaurants/css/dashboard/tables.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+
+<div class="page-wrap">
+  <div class="container">
+    <div class="page-top">
+      <div>
+        <div class="bc">
+          <a href="{% url 'common:dashboard' %}">Dashboard</a>
+          <span class="sep">›</span>
+          <a href="{% url 'common:dashboard-restaurant' restaurant.uid %}">{{ restaurant.name }}</a>
+          <span class="sep">›</span>
+          <span class="cur">Tables</span>
+        </div>
+        <div class="page-title">Tables</div>
+        <div class="page-sub">{{ restaurant.name }} — {{ tables|length }} table{{ tables|length|pluralize }}</div>
+      </div>
+      <div class="d-flex gap-2">
+        <form method="post" action="{% url 'common:table-create' restaurant.uid %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add Table
+          </button>
+        </form>
+        {% if tables %}
+        <form method="post" action="{% url 'common:table-delete' restaurant.uid %}" onsubmit="return confirm('Remove last table?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="fas fa-minus"></i> Remove Last
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not tables %}
+      {% include 'common/partials/empty.html' with title="No Tables" text="Add tables to generate QR codes for customers." icon="fas fa-chair" %}
+    {% else %}
+    <div class="custom-grid">
+      {% for table in tables %}
+      <div class="table-card">
+        <div class="table-card-header {% cycle 'color-1' 'color-2' 'color-3' 'color-4' 'color-5' 'color-6' 'color-7' 'color-8' %}">
+          <div class="table-num">Table #{{ table.number }}</div>
+          <span class="table-badge">QR Ready</span>
+        </div>
+
+        <div class="table-card-body">
+          <div class="qr-wrap">
+            {% if table.qr_code %}
+              <img src="{{ table.qr_code.url }}?v={{ table.uid }}" alt="QR Table {{ table.number }}">
+              <a href="{{ table.qr_code.url }}" target="_blank" class="qr-link">
+                <i class="fas fa-external-link-alt"></i> Open Full Size
+              </a>
+            {% else %}
+              <i class="fas fa-qrcode fa-3x" style="opacity:0.1;color:#9aa0b4;"></i>
+              <p class="small text-muted mt-2 mb-0">No QR Code</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

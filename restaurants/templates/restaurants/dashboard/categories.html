@@ -1,0 +1,23 @@
+{% extends 'common/base.html' %}
+{% block title %}Categories | Waiter{% endblock %}
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+<div class="container py-4">
+  <h2>Categories - {{ restaurant.name }}</h2>
+  <div class="d-flex gap-2 mb-3">
+    <a href="{% url 'common:category-create-page' restaurant.uid %}" class="btn btn-primary btn-sm">Add Category</a>
+    {% if not categories %}<form method="post" action="{% url 'common:category-import' restaurant.uid %}">{% csrf_token %}<button class="btn btn-outline-primary btn-sm">Import from Menu</button></form>{% endif %}
+  </div>
+  {% for cat in categories %}
+    <div class="card mb-2 p-3 d-flex flex-row justify-content-between">
+      <a href="{% url 'common:dashboard-category' cat.uid %}">{{ cat.name }}</a>
+      <div class="d-flex gap-2">
+        <a href="{% url 'common:category-create-page' restaurant.uid %}?uid={{ cat.uid }}&name={{ cat.name }}" class="btn btn-secondary btn-sm">Edit</a>
+        <form method="post" action="{% url 'common:category-delete' cat.uid %}">{% csrf_token %}<button class="btn btn-outline-danger btn-sm">Delete</button></form>
+      </div>
+    </div>
+  {% empty %}
+    {% include 'common/partials/empty.html' with title="No Categories" text="Import from the default menu or add your own categories." icon="fas fa-folder-open" %}
+  {% endfor %}
+</div>
+{% endblock %}

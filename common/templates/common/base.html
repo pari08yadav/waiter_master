@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="{% static 'fa/css/all.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/waiter.css' %}">
+  <link rel="stylesheet" href="{% static 'css/theme-unified.css' %}">
   {% block extra_head %}{% endblock %}
   <title>{% block title %}Waiter{% endblock %}</title>
 </head>
@@ -21,52 +22,7 @@
 {% block script %}{% endblock %}
 
 {% if NOTIFY_WS_DATA %}
-<style>
-  #order-notify {
-    position: fixed;
-    top: -80px;
-    left: 0; right: 0;
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    padding: .6rem 1rem 0;
-    pointer-events: none;
-    transition: top .3s cubic-bezier(.4,0,.2,1);
-  }
-  #order-notify.show { top: 0; }
-  #order-notify-inner {
-    pointer-events: all;
-    background: #1a1a2e;
-    color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.2);
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    padding: .7rem 1rem .7rem 1.1rem;
-    max-width: 460px;
-    width: 100%;
-    cursor: pointer;
-  }
-  #order-notify-inner:hover { background: #16213e; }
-  .n-dot {
-    width: 9px; height: 9px; border-radius: 50%;
-    background: #e63946; flex-shrink: 0;
-    animation: ndot 1.2s infinite;
-  }
-  @keyframes ndot { 0%,100%{opacity:1} 50%{opacity:.3} }
-  #order-notify-text { font-size: .84rem; font-weight: 600; flex: 1; }
-  #order-notify-cta {
-    font-size: .72rem; font-weight: 700; color: #e63946;
-    background: rgba(230,57,70,.13); border-radius: 6px;
-    padding: .22rem .6rem; white-space: nowrap; flex-shrink: 0;
-  }
-  #order-notify-close {
-    background: none; border: none; color: #9aa0b4;
-    font-size: .8rem; line-height: 1; padding: 0; cursor: pointer; flex-shrink: 0;
-  }
-  #order-notify-close:hover { color: #fff; }
-</style>
+<link rel="stylesheet" href="{% static 'common/css/notify.css' %}">
 
 <div id="order-notify">
   <div id="order-notify-inner">

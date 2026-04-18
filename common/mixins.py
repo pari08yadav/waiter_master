@@ -1,10 +1,3 @@
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
+from shared.common.mixins import AuthMixin
 
-
-class AuthMixin:
-    @method_decorator(login_required)
-    def dispatch(self, request, *args, **kwargs):
-        return super(AuthMixin, self).dispatch(  # noqa
-            request, *args, **kwargs
-        )
+__all__ = ["AuthMixin"]

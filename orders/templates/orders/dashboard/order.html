@@ -1,0 +1,217 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}Orders | Waiter{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'orders/css/dashboard/order.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+
+<div class="page-wrap">
+  <div class="container py-4">
+
+    <div class="page-top mb-4">
+      <div>
+        <div class="page-title">{{ restaurant.name }}</div>
+        <div class="page-sub">
+            <span id="ws-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:5px;"></span>
+            Live Kitchen Updates
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-dark rounded-pill px-3">{{ orders|length }} Total Orders</span>
+      </div>
+    </div>
+
+    <div class="status-nav">
+      <a href="{% url 'common:dashboard-order' restaurant.uid %}" class="status-link {% if not status_filter %}active{% endif %}">All Orders</a>
+      {% for val, lbl in order_statuses %}
+      <a href="{% url 'common:dashboard-order' restaurant.uid %}?status={{ val }}"
+        class="status-link {% if status_filter == val %}active{% endif %}">{{ lbl }}</a>
+      {% endfor %}
+    </div>
+
+    <div id="orders-list">
+      {% if not orders %}
+        {% include 'common/partials/empty.html' with title="No Orders" text="New orders will appear here automatically." icon="fas fa-receipt" %}
+      {% else %}
+      <div class="custom-grid">
+        {% for order in orders %}
+        <div class="order-card" id="order-{{ order.uid }}">
+
+          <div class="oc-header">
+            <div class="oc-table-info">
+              <div class="oc-avatar"><i class="fas fa-chair"></i></div>
+              <div>
+                <div class="oc-table-num">Table #{{ order.table.number }}</div>
+                <div class="oc-time">{{ order.created|date:"h:i A" }}</div>
+              </div>
+            </div>
+            <span class="oc-badge {{ order.status }}" id="badge-{{ order.uid }}">{{ order.get_status_display }}</span>
+          </div>
+
+          <div class="oc-stats">
+            <div class="oc-stat">
+              <span class="oc-stat-num">{{ order.orderitem_set.count }}</span>
+              <span class="oc-stat-lbl">Items</span>
+            </div>
+            <div class="oc-stat">
+              <span class="oc-stat-num" id="total-{{ order.uid }}">{{ order.total_price|format_currency }}</span>
+              <span class="oc-stat-lbl">Total</span>
+            </div>
+          </div>
+
+          <div class="oc-body">
+            {% for item in order.orderitem_set.all %}
+            <div class="oc-item">
+              <span class="oc-item-name">
+                <i class="fas fa-circle me-1" style="font-size: 0.5rem; color: {% if item.menu_item.menu_type == 'VEG' %}#10b981{% else %}#ef4444{% endif %};"></i>
+                {{ item.menu_item.name }}
+              </span>
+              <span class="oc-item-qty">x{{ item.quantity }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="oc-footer" id="actions-{{ order.uid }}">
+            {% if order.status == 'PENDING' %}
+              <button class="btn btn-success" onclick="ws_send('{{ order.uid }}','ACCEPTED')">Accept</button>
+              <button class="btn btn-outline-danger" onclick="ws_send('{{ order.uid }}','REJECTED')">Reject</button>
+            {% elif order.status == 'ACCEPTED' %}
+              <button class="btn btn-warning w-100" onclick="ws_send('{{ order.uid }}','MAKING')">Start Cooking</button>
+            {% elif order.status == 'MAKING' %}
+              <button class="btn btn-primary w-100" onclick="ws_send('{{ order.uid }}','COMPLETED')">Mark Ready</button>
+            {% else %}
+              <div class="text-center w-100 py-1" style="font-size: 0.7rem; color: #9aa0b4; font-weight: 600;">
+                <i class="fas fa-check-double me-1"></i> ORDER PROCESSED
+              </div>
+            {% endif %}
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<button class="chat-fab" onclick="toggleChat()" title="AI Assistant">
+  <i class="fas fa-robot" style="color:#fff;font-size:1.2rem;"></i>
+</button>
+
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-panel-header">
+    <i class="fas fa-robot me-2"></i>AI Assistant
+    <button onclick="toggleChat()" style="float:right;background:none;border:none;color:#9aa0b4;font-size:1rem;cursor:pointer;">&#x2715;</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row">
+    <input id="chat-input" type="text" class="form-control form-control-sm rounded-3"
+           placeholder='Try "accept table 3"'
+           onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-danger btn-sm rounded-3" onclick="sendChat()">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
+
+<audio id="order-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
+{% endblock %}
+
+{% block script %}
+<script>
+  const RID = "{{ restaurant.uid }}";
+  let ws = null;
+
+  function ws_send(uid, status) {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({uid, status}));
+  }
+
+  function setActions(uid, status) {
+    const el = document.getElementById('actions-' + uid);
+    if (!el) return;
+    const actions = {
+      PENDING:  `<button class="btn btn-success" onclick="ws_send('${uid}','ACCEPTED')">Accept</button>
+                 <button class="btn btn-outline-danger" onclick="ws_send('${uid}','REJECTED')">Reject</button>`,
+      ACCEPTED: `<button class="btn btn-warning w-100" onclick="ws_send('${uid}','MAKING')">Start Cooking</button>`,
+      MAKING:   `<button class="btn btn-primary w-100" onclick="ws_send('${uid}','COMPLETED')">Mark Ready</button>`,
+    };
+    el.innerHTML = actions[status] ?? '<div class="text-center w-100 py-1" style="font-size: 0.7rem; color: #9aa0b4; font-weight: 600;"><i class="fas fa-check-double me-1"></i> ORDER PROCESSED</div>';
+  }
+
+  function onMessage(data) {
+    const card = document.getElementById('order-' + data.uid);
+    if (card) {
+      const badge = document.getElementById('badge-' + data.uid);
+      if (badge) {
+        badge.className = 'oc-badge ' + data.status;
+        badge.textContent = data.status_display || data.status;
+      }
+      setActions(data.uid, data.status);
+    } else {
+      document.getElementById('order-sound').play();
+      location.reload();
+    }
+  }
+
+  function connect() {
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    ws = new WebSocket(protocol + window.location.host + '/ws/order/' + RID + '/');
+    ws.onopen  = () => { document.getElementById('ws-dot').style.background = '#10b981'; };
+    ws.onclose = () => { document.getElementById('ws-dot').style.background = '#dc2626'; setTimeout(connect, 3000); };
+    ws.onmessage = e => onMessage(JSON.parse(e.data));
+  }
+  connect();
+
+  const AGENT_URL = "{% url 'common:staff-agent-chat' restaurant.uid %}";
+
+  function toggleChat() {
+    document.getElementById('chat-panel').classList.toggle('open');
+  }
+
+  function getCsrf() {
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (input?.value) return input.value;
+    const cookie = document.cookie.split('; ').find((row) => row.startsWith('csrftoken='));
+    return cookie ? cookie.slice('csrftoken='.length) : '';
+  }
+
+  function appendMsg(text, role) {
+    const el = document.createElement('div');
+    el.className = 'chat-bubble ' + role;
+    el.textContent = text;
+    const msgs = document.getElementById('chat-messages');
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    appendMsg(msg, 'user');
+    const sendBtn = input.nextElementSibling;
+    sendBtn.disabled = true;
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const csrf = getCsrf();
+      if (csrf) headers['X-CSRFToken'] = csrf;
+      const res = await fetch(AGENT_URL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      appendMsg(data.reply || data.error || 'No response', 'bot');
+    } catch {
+      appendMsg('Something went wrong. Please try again.', 'bot');
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

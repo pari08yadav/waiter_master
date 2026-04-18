@@ -1,11 +1,10 @@
 import logging
-from tkinter import Menu
 
 import pandas as pd
 from django.core.management import BaseCommand
 from loguru import logger
 
-from common.models import MenuItem
+from restaurants.models import MenuItem
 
 
 class Command(BaseCommand):

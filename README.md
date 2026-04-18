@@ -33,12 +33,53 @@
 
 ## Project Structure
 
-```
+```text
 waiter-master/
 ├── waiter/
-│   ├── asgi.py         # Routes HTTP vs WebSocket traffic
-│   ├── settings.py     # All configuration
-│   └── urls.py         # Root URL config
+│   ├── settings.py
+│   ├── urls.py
+│   └── asgi.py
+├── accounts/
+│   ├── application/
+│   ├── domain/
+│   ├── infrastructure/
+│   ├── interfaces/
+│   ├── templates/accounts/
+│   ├── models.py
+│   └── views.py
+├── restaurants/
+│   ├── application/
+│   ├── interfaces/
+│   ├── templates/restaurants/
+│   ├── models.py
+│   ├── forms.py
+│   ├── serializers.py
+│   ├── tasks.py
+│   └── views.py
+├── orders/
+│   ├── application/
+│   ├── domain/
+│   ├── infrastructure/
+│   ├── interfaces/
+│   ├── templates/orders/
+│   ├── models.py
+│   ├── serializers.py
+│   ├── consumers.py
+│   ├── routing.py
+│   └── views.py
+├── agent/
+│   ├── application/
+│   ├── domain/
+│   ├── infrastructure/
+│   ├── interfaces/
+│   ├── agent.py
+│   ├── tools.py
+│   ├── prompts.py
+│   ├── vector_store.py
+│   └── views.py
+├── shared/
+│   ├── application/
+│   └── common/
 ├── common/
 │   ├── models.py       # All database models
 │   ├── views.py        # Page views + REST API views
@@ -58,31 +99,46 @@ waiter-master/
 
 ---
 
-## Getting Started
+## Quick Start (Local)
 
-1. Clone and install dependencies
+### 1) Clone and install
 
 ```bash
 git clone <repo-url>
 cd waiter-master
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. Set up environment variables
+### 2) Configure environment
 
 ```bash
-cp .env.template .env
-# Fill in the values in .env
+cp env.template .env
 ```
 
-3. Run migrations and start the server
+Set at minimum:
+
+- `DJANGO_SECRET_KEY`
+- `DEBUG=True`
+- `ALLOWED_HOSTS=127.0.0.1,localhost`
+- `BASE_URL=127.0.0.1:8000`
+- `GEMINI_API_KEY` (required for chat endpoints)
+
+### 3) Migrate and run
 
 ```bash
-python manage.py migrate
+python3 manage.py migrate
+python3 manage.py runserver
+```
+
+Or with Daphne:
+
+```bash
 daphne waiter.asgi:application
 ```
 
-Visit `http://localhost:8000` — log in at `/login/` to access the dashboard.
+Open: `http://127.0.0.1:8000`
 
 ---
 
@@ -99,7 +155,7 @@ Visit `http://localhost:8000` — log in at `/login/` to access the dashboard.
 
 ---
 
-## Key Pages
+## Main URLs
 
 | URL                                        | Who uses it | What it does              |
 | ------------------------------------------ | ----------- | ------------------------- |

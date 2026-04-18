@@ -1,8 +1,8 @@
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
-from common.model_helpers import attach_qr
-from common.models import Table
+from restaurants.models import Table
+from shared.common.model_helpers import attach_qr
 
 
 class Command(BaseCommand):

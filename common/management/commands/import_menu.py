@@ -1,6 +1,6 @@
 from django.core.management import BaseCommand
 
-from common.tasks import import_menu_items
+from restaurants.tasks import import_menu_items
 
 
 class Command(BaseCommand):

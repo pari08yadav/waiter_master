@@ -1,0 +1,109 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}My Orders | Waiter{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'orders/css/dashboard/order.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="container">
+    <div class="page-top">
+      <div>
+        <div class="page-title">{{ table.restaurant.name }} - Table #{{ table.number }}</div>
+        <div class="page-sub">Track your order progress in real time.</div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-semibold">
+          <span id="ws-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:5px;"></span>
+          Live Status
+        </span>
+        <a href="{% url 'common:table' table.uid %}" class="btn btn-secondary btn-sm">Back to Menu</a>
+      </div>
+    </div>
+
+  {% if orders %}
+    <div class="custom-grid">
+      {% for order in orders %}
+        <div class="order-card" id="order-{{ order.uid }}">
+          <div class="oc-header">
+            <div class="oc-table-info">
+              <div class="oc-avatar"><i class="fas fa-receipt"></i></div>
+              <div>
+                <div class="oc-table-num">Order #{{ forloop.counter }}</div>
+                <div class="oc-time">{{ order.created|date:"h:i A" }}</div>
+              </div>
+            </div>
+            <span class="oc-badge {{ order.status }}" id="status-{{ order.uid }}">{{ order.status_display }}</span>
+          </div>
+
+          <div class="oc-stats">
+            <div class="oc-stat">
+              <span class="oc-stat-num">{{ order.orderitem_set.count }}</span>
+              <span class="oc-stat-lbl">Items</span>
+            </div>
+            <div class="oc-stat">
+              <span class="oc-stat-num">{{ order.total_price|format_currency }}</span>
+              <span class="oc-stat-lbl">Total</span>
+            </div>
+          </div>
+
+          <div class="oc-body">
+            {% for item in order.orderitem_set.all %}
+              <div class="oc-item">
+                <span class="oc-item-name">{{ item.menu_item.name }}</span>
+                <span class="oc-item-qty">x{{ item.quantity }} · {{ item.total_price|format_currency }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% include 'common/partials/empty.html' with title="No Orders Yet" text="Place an order from the menu to see it here." icon="fas fa-bowl-food" %}
+  {% endif %}
+</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  const CUSTOMER_WS_ROOM = "{{ table.uid }}";
+  let customerWs = null;
+
+  function setWsDot(color) {
+    const dot = document.getElementById('ws-dot');
+    if (dot) dot.style.background = color;
+  }
+
+  function onCustomerOrderMessage(data) {
+    if (!data?.uid) return;
+    const statusEl = document.getElementById('status-' + data.uid);
+    if (statusEl) {
+      statusEl.className = 'oc-badge ' + (data.status || '');
+      statusEl.textContent = data.status_display || data.status || statusEl.textContent;
+      return;
+    }
+    // New/unknown order for this session: reload to keep view accurate.
+    window.location.reload();
+  }
+
+  function connectCustomerOrders() {
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    customerWs = new WebSocket(protocol + window.location.host + '/ws/order/' + CUSTOMER_WS_ROOM + '/');
+    customerWs.onopen = () => setWsDot('#10b981');
+    customerWs.onclose = () => {
+      setWsDot('#dc2626');
+      setTimeout(connectCustomerOrders, 3000);
+    };
+    customerWs.onmessage = (event) => {
+      try {
+        onCustomerOrderMessage(JSON.parse(event.data));
+      } catch (_) {}
+    };
+  }
+
+  connectCustomerOrders();
+</script>
+{% endblock %}

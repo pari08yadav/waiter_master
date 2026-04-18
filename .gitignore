@@ -482,3 +482,5 @@ static
 
 
 /db.sqlite3
+qdrant_storage/
+db.sqbpro

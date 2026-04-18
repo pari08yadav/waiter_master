@@ -1,0 +1,14 @@
+{% extends 'common/base.html' %}
+{% block title %}Add Category | Waiter{% endblock %}
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+<div class="container py-4">
+  <h2>{% if edit_uid %}Edit{% else %}Add{% endif %} Category</h2>
+  <form method="post" action="{% url 'common:category-create-page' restaurant.uid %}">
+    {% csrf_token %}
+    <input type="hidden" name="uid" value="{{ edit_uid }}">
+    <div class="mb-3"><input type="text" name="name" class="form-control" value="{{ edit_name|default:'' }}" required></div>
+    <button type="submit" class="btn btn-primary">{% if edit_uid %}Save{% else %}Add{% endif %}</button>
+  </form>
+</div>
+{% endblock %}

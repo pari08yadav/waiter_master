@@ -1,0 +1,147 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}{{ table.restaurant.name }} | Menu{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'restaurants/css/table.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="table-header">
+  <div class="container-fluid px-5">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <div class="restaurant-name">{{ table.restaurant.name }}</div>
+        <span class="badge bg-soft-danger text-danger border rounded-pill">Table #{{ table.number }}</span>
+      </div>
+      <a href="{% url 'common:table-order' table.uid %}" class="btn btn-dark rounded-pill px-4">
+        <i class="fas fa-list-ul me-2"></i>My Orders
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid px-5">
+  <div class="main-wrapper">
+    <div class="menu-column">
+      <div class="position-relative mb-5">
+        <i class="fas fa-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+        <input type="search" class="form-control form-control-lg border-0 shadow-sm ps-5 rounded-4"
+               id="search-input" placeholder="What are you looking for?" value="{{ search }}">
+      </div>
+      <div id="search-empty" class="search-empty mb-4">
+        No items matched your search.
+      </div>
+
+      {% for entry in category_data %}
+      <div id="category-{{ entry.category.uid }}" class="mb-5 category-block">
+        <h2 class="category-title">{{ entry.category.name }}</h2>
+        <div class="menu-grid">
+          {% for item in entry.menu_items %}
+          <div class="menu-card item-card" data-item-name="{{ item.name|lower }}">
+            <div class="img-wrapper">
+              <img class="menu-card-img" src="{% if item.image %}{{ item.image.url }}{% else %}https://placehold.co/500x375/fff/e2e8f0?text={{ item.name|slice:':1' }}{% endif %}" alt="{{ item.name }}">
+            </div>
+            <div class="menu-card-body">
+              <div class="menu-card-name">{{ item.name }}</div>
+              <div class="menu-card-price mb-3">
+                {% if item.half_price %}<small class="text-muted fw-normal">H: {{ item.half_price|format_currency }} /</small> {% endif %}
+                {{ item.full_price|format_currency }}
+              </div>
+              <div class="mt-auto">
+                {% if item.available %}
+                <div class="btn-group btn-group-sm w-100 cart-btn-group"
+                     data-uid="{{ item.uid }}" data-name="{{ item.name }}"
+                     data-full-price="{{ item.full_price }}" data-half-price="{{ item.half_price }}">
+                  <button class="btn btn-outline-danger remove-btn d-none" onclick="removeItem(this)">-</button>
+                  <button class="btn btn-outline-danger qty-display d-none" disabled></button>
+                  <button class="btn btn-add add-btn" onclick="addItem(this)">ADD TO CART</button>
+                </div>
+                {% else %}
+                <span class="badge w-100 py-2 bg-light text-muted">Sold Out</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="sidebar-column">
+      <div class="cart-container">
+        <div class="cart-header d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-shopping-basket me-2"></i>Your Basket</span>
+          <span class="badge bg-danger rounded-pill" id="cart-count">0</span>
+        </div>
+
+        <div class="cart-body" id="cart-sidebar-body">
+          <div id="cart-empty" class="text-center py-5">
+            <i class="fas fa-cart-arrow-down fa-3x text-light mb-3"></i>
+            <p class="text-muted small">Your basket is empty.<br>Add some delicious items!</p>
+          </div>
+        </div>
+
+        <div class="cart-footer d-none" id="cart-sidebar-footer">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <span class="text-muted fw-bold">Total Amount</span>
+            <span class="fs-4 fw-800 text-danger" id="cart-grand-total"></span>
+          </div>
+          <button class="btn btn-danger w-100 py-3 fw-bold rounded-3 shadow-sm" onclick="placeOrder()">
+            PLACE ORDER <i class="fas fa-arrow-right ms-2"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="chat-fab" onclick="toggleChat()" title="Ask AI">
+  <i class="fas fa-robot" style="color:#fff;font-size:1.2rem;"></i>
+</button>
+
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-panel-header">
+    <i class="fas fa-robot me-2"></i>Ask about the menu
+    <button onclick="toggleChat()" style="float:right;background:none;border:none;color:#9aa0b4;font-size:1rem;cursor:pointer;">&#x2715;</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row" id="chat-form">
+    <input id="chat-input" type="text" class="form-control form-control-sm rounded-3"
+           placeholder='e.g. "show veg items under ₹150"'
+           onkeydown="if(event.key==='Enter')sendChat()">
+    <button id="chat-send-btn" type="button" class="btn btn-danger btn-sm rounded-3">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
+
+<div class="modal fade" id="price-type-modal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <form onsubmit="savePriceType(event)">
+        <div class="modal-body p-4">
+          <h6 class="fw-bold mb-3">Select Portion</h6>
+          <div id="price-type-choices" class="d-grid gap-2"></div>
+          <button type="submit" class="btn btn-danger w-100 py-2 mt-4 rounded-3 fw-bold">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div id="ui-toast" class="ui-toast"></div>
+<div
+  id="table-page-config"
+  data-table-uid="{{ table.uid }}"
+  data-agent-url="{% url 'common:agent-chat' table.uid %}"
+  data-order-redirect-url="{% url 'common:table-order' table.uid %}"
+></div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'restaurants/js/table.js' %}?v=1"></script>
+{% endblock %}

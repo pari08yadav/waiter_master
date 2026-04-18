@@ -1,0 +1,114 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}{{ category.name }} | Waiter{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'restaurants/css/dashboard/category.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+
+<div class="page-wrap">
+  <div class="container">
+
+    <div class="page-top">
+      <div>
+        <div class="bc">
+          <a href="{% url 'common:dashboard' %}">Dashboard</a>
+          <span class="sep">›</span>
+          <a href="{% url 'common:dashboard-restaurant' category.restaurant.uid %}">{{ category.restaurant.name }}</a>
+          <span class="sep">›</span>
+          <a href="{% url 'common:restaurant-categories' category.restaurant.uid %}">Categories</a>
+          <span class="sep">›</span>
+          <span class="cur">{{ category.name }}</span>
+        </div>
+        <div class="page-title">{{ category.name }}</div>
+        <div class="page-sub">{{ category.restaurant.name }}</div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="{% url 'common:category-edit' category.uid %}" class="btn btn-secondary btn-sm">
+          <i class="fas fa-pen"></i> Edit
+        </a>
+        {% if not menu_items %}
+        <form method="post" action="{% url 'common:category-delete' category.uid %}" onsubmit="return confirm('Delete this category?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="section-label">
+          <i class="fas fa-utensils"></i> Items
+          <span class="count-chip">{{ menu_items|length }}</span>
+        </div>
+        <a href="{% url 'common:menu-item-form' category.uid %}" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus"></i> Add Item
+        </a>
+      </div>
+
+      {% if not menu_items %}
+        {% include 'common/partials/empty.html' with title="No Items" text="Add menu items to this category." icon="fas fa-utensils" %}
+      {% else %}
+      <div class="menu-grid">
+        {% for item in menu_items %}
+        <div class="menu-card">
+
+          {% if item.image %}
+            <img src="{{ item.image.url }}" class="menu-img" alt="{{ item.name }}">
+          {% endif %}
+
+          <div class="d-flex gap-2 mb-2 align-items-start">
+            {% if item.menu_type == 'VEG' %}
+              <div class="veg-box mt-1"><div class="veg-dot"></div></div>
+            {% else %}
+              <div class="nonveg-box mt-1"><div class="nonveg-dot"></div></div>
+            {% endif %}
+            <div>
+              <div class="menu-title">{{ item.name }}</div>
+              {% if item.description %}
+                <div class="menu-desc">{{ item.description|truncatechars:60 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-2">
+            {% if item.available %}
+              <span class="badge-yes">Available</span>
+            {% else %}
+              <span class="badge-no">Not Available</span>
+            {% endif %}
+          </div>
+
+          <div>
+            {% if item.half_price %}
+              <div class="half-price">Half: {{ item.half_price|format_currency }}</div>
+            {% endif %}
+            <div class="price">{{ item.full_price|format_currency }}</div>
+          </div>
+
+          <div class="card-actions">
+            <a href="{% url 'common:menu-item-form' category.uid %}?item_uid={{ item.uid }}" class="icon-btn">
+              <i class="fas fa-pen"></i>
+            </a>
+            <form method="post" action="{% url 'common:menu-item-delete' item.uid %}" onsubmit="return confirm('Delete {{ item.name }}?')">
+              {% csrf_token %}
+              <button type="submit" class="icon-btn"><i class="fas fa-trash"></i></button>
+            </form>
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

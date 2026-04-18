@@ -123,7 +123,13 @@ img{max-width:100%}
 .stat-btn.orders .stat-num{color:var(--red)}
 .stat-btn.orders:hover{background:var(--red-subtle)}
 
-/* ── Modals ── */
+/* ── Modals ── (Bootstrap JS; backdrop + hide when .show missing from bundle) */
+.modal-backdrop{
+  position:fixed;top:0;left:0;z-index:1050;width:100vw;height:100vh;background:#000;
+}
+.modal-backdrop.fade{opacity:0;transition:opacity .15s linear}
+.modal-backdrop.show{opacity:.5}
+
 .modal-content{border:none;border-radius:var(--r-lg);box-shadow:0 20px 60px rgba(0,0,0,.15);overflow:hidden}
 .modal-header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 1.3rem}
 .modal-title{font-size:.9rem;font-weight:700;color:var(--text)}

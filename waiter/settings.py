@@ -40,7 +40,8 @@ DEBUG = os.getenv("DEBUG", False) == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [o for o in csrf_origins.split(",") if o]
 
 # Application definition
 
@@ -61,6 +62,9 @@ INSTALLED_APPS = [
     "storages",
     # Internal
     "common.apps.CommonConfig",
+    "accounts.apps.AccountsConfig",
+    "restaurants.apps.RestaurantsConfig",
+    "orders.apps.OrdersConfig",
 ]
 
 MIDDLEWARE = [
@@ -71,10 +75,10 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "common.middleware.PatchRequestMiddleware",
+    "shared.common.middleware.PatchRequestMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "common.middleware.TimezoneMiddleware",
+    "shared.common.middleware.TimezoneMiddleware",
 ]
 
 ROOT_URLCONF = "waiter.urls"
@@ -252,7 +256,7 @@ if USE_S3:
     # s3 public media settings
     PUBLIC_MEDIA_LOCATION = MEDIA_ROOT
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{PUBLIC_MEDIA_LOCATION}/"
-    DEFAULT_FILE_STORAGE = "common.storage_backends.PublicMediaStorage"
+    DEFAULT_FILE_STORAGE = "shared.common.storage_backends.PublicMediaStorage"
 
 
 MEDIAFILES_LOCATION = "media"
@@ -290,7 +294,7 @@ if not DEBUG:
                 "level": "INFO",
                 "class": "logging.handlers.SysLogHandler",
                 "facility": SysLogHandler.LOG_LOCAL2,
-                "address": "/dev/log",
+                "address": "/var/run/syslog",
                 "formatter": "verbose",
             },
             # Warning messages are sent to admin emails

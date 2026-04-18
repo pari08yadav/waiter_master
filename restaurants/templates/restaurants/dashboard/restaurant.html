@@ -1,0 +1,91 @@
+{% extends 'common/base.html' %}
+{% load static %}
+{% block title %}{{ restaurant.name }} | Waiter{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'restaurants/css/dashboard/restaurant.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+
+<div class="page-wrap">
+  <div class="container">
+    <div class="page-top">
+      <div>
+        <div class="bc">
+          <a href="{% url 'common:dashboard' %}">Dashboard</a>
+          <span class="sep">›</span>
+          <span class="cur">{{ restaurant.name }}</span>
+        </div>
+        <div class="page-title">{{ restaurant.name }}</div>
+        <div class="page-sub">{{ user_profile.chain.name }}</div>
+      </div>
+      <form method="post" action="{% url 'common:restaurant-delete' restaurant.uid %}" onsubmit="return confirm('Delete {{ restaurant.name }}?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="fas fa-trash"></i> Delete Restaurant
+        </button>
+      </form>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12">
+        <div class="section-card">
+          <div class="section-card-header tables-bg">
+            <div class="section-card-icon"><i class="fas fa-chair"></i></div>
+            <div class="section-card-title">Tables</div>
+            <div class="section-card-sub">Manage tables and QR codes</div>
+          </div>
+          <div class="section-card-body">
+            <div class="info-row">
+              <span class="info-row-label">Total Tables</span>
+              <span class="info-row-value">{{ tables_count }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row-label">QR Codes</span>
+              <span class="info-row-value">{{ tables_count }} Generated</span>
+            </div>
+            <p class="text-muted mb-0" style="font-size:0.82rem;">
+              Each table gets a unique QR code. Customers scan it to browse the menu and place orders.
+            </p>
+          </div>
+          <div class="section-card-footer">
+            <a href="{% url 'common:restaurant-tables' restaurant.uid %}" class="btn btn-primary">
+              <i class="fas fa-chair"></i> Manage Tables
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="section-card">
+          <div class="section-card-header cats-bg">
+            <div class="section-card-icon"><i class="fas fa-list"></i></div>
+            <div class="section-card-title">Categories</div>
+            <div class="section-card-sub">Manage menu categories and items</div>
+          </div>
+          <div class="section-card-body">
+            <div class="info-row">
+              <span class="info-row-label">Total Categories</span>
+              <span class="info-row-value">{{ categories_count }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row-label">Restaurant</span>
+              <span class="info-row-value">{{ restaurant.name }}</span>
+            </div>
+            <p class="text-muted mb-0" style="font-size:0.82rem;">
+              Organise your menu into categories. Each category can have multiple items with prices and descriptions.
+            </p>
+          </div>
+          <div class="section-card-footer">
+            <a href="{% url 'common:restaurant-categories' restaurant.uid %}" class="btn btn-success">
+              <i class="fas fa-list"></i> Manage Categories
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

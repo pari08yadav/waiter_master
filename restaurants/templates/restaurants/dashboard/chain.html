@@ -1,0 +1,77 @@
+{% extends 'common/base.html' %}
+{% load static waiter_filters %}
+{% block title %}Dashboard | Waiter{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'restaurants/css/dashboard/chain.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+
+<div class="page-wrap">
+  <div class="container">
+    <div class="page-top">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Chain: <strong>{{ user_profile.chain.name }}</strong></div>
+      </div>
+      <a href="{% url 'common:restaurant-create' %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i> Add Restaurant
+      </a>
+    </div>
+
+    {% if not restaurants %}
+      {% include 'common/partials/empty.html' with title="No Restaurants" text="Add your first restaurant to get started." icon="fas fa-store-slash" %}
+    {% else %}
+    <div class="custom-grid">
+      {% for r in restaurants %}
+      <div>
+        <div class="restaurant-card">
+          <div class="rc-header">
+            <a href="{% url 'common:dashboard-restaurant' r.uid %}" class="d-flex align-items-center gap-3 text-decoration-none flex-grow-1 min-w-0">
+              <div class="rc-avatar"><i class="fas fa-store"></i></div>
+              <div class="min-w-0">
+                <div class="rc-name">{{ r.name }}</div>
+                <div class="rc-chain">{{ user_profile.chain.name }}</div>
+              </div>
+            </a>
+            <div class="rc-actions">
+              <a href="{% url 'common:restaurant-create' %}?uid={{ r.uid }}&name={{ r.name }}" class="rc-btn edit" title="Edit">
+                <i class="fas fa-pen"></i>
+              </a>
+              <form method="post" action="{% url 'common:restaurant-delete' r.uid %}" class="d-inline" onsubmit="return confirm('Delete {{ r.name }}?')">
+                {% csrf_token %}
+                <button type="submit" class="rc-btn del" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          <div class="rc-stats">
+            <a href="{% url 'common:restaurant-tables' r.uid %}" class="rc-stat tables">
+              <span class="rc-stat-num">{{ r.table_count }}</span>
+              <span class="rc-stat-lbl">Tables</span>
+            </a>
+            <a href="{% url 'common:restaurant-categories' r.uid %}" class="rc-stat cats">
+              <span class="rc-stat-num">{{ r.category_count }}</span>
+              <span class="rc-stat-lbl">Categories</span>
+            </a>
+            <a href="{% url 'common:dashboard-order' r.uid %}" class="rc-stat orders">
+              <span class="rc-stat-num">{{ r.order_count }}</span>
+              <span class="rc-stat-lbl">Orders</span>
+            </a>
+          </div>
+          <div class="rc-footer">
+            <a href="{% url 'common:dashboard-restaurant' r.uid %}" class="btn btn-secondary btn-sm w-100">
+              <i class="fas fa-arrow-right"></i> Manage Restaurant
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

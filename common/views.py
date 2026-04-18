@@ -1,700 +1,89 @@
-import json
-import uuid
-from urllib.parse import unquote
+"""Compatibility facade for legacy common.views imports.
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer  # type: ignore
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.db.models import Case, F, Prefetch, Q, Sum, When
-from django.http import Http404, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
-from django.utils.decorators import method_decorator
-from django.views.generic import FormView, TemplateView
-from django_filters.rest_framework import DjangoFilterBackend
-from loguru import logger
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.response import Response
-from rest_framework.status import (
-    HTTP_200_OK,
-    HTTP_204_NO_CONTENT,
-    HTTP_404_NOT_FOUND,
+Business logic now lives in domain apps:
+- accounts.views
+- restaurants.views
+- orders.views
+"""
+
+from django.views.generic import TemplateView
+
+from accounts.views import LoginView, LogoutView, UserProfileViewSet, UserViewSet, is_ajax
+from orders.views import (
+    OrderAPIView,
+    OrderDashboardPage,
+    OrderViewSet,
+    TableOrderPage,
+    is_valid_uid,
 )
-from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
-
-from common.forms import LoginForm, RestaurantForm, CategoryForm, MenuItemForm
-from common.model_helpers import generate_chain_name, generate_username
-from common.models import (
-    Category,
-    Chain,
-    MenuItem,
-    Order,
-    OrderItem,
-    Restaurant,
-    Table,
-    UserProfile,
+from restaurants.views import (
+    CategoryCreatePageView,
+    CategoryCreateView,
+    CategoryDeleteView,
+    CategoryDetailPage,
+    CategoryEditView,
+    CategoryImportView,
+    CategoryViewSet,
+    DashboardPage,
+    MenuItemCreateView,
+    MenuItemDeleteView,
+    MenuItemFormView,
+    MenuItemViewSet,
+    RestaurantCategoriesPage,
+    RestaurantCreateView,
+    RestaurantDeleteView,
+    RestaurantDetailPage,
+    RestaurantTablesPage,
+    RestaurantViewSet,
+    TableCreateView,
+    TableDeleteView,
+    TableMenuPage,
+    TableViewSet,
 )
-from common.serializers import (
-    CategorySerializer,
-    LiteCategorySerializer,
-    LiteMenuItemSerializer,
-    LiteUserProfileSerializer,
-    MenuItemSerializer,
-    OrderSerializer,
-    RestaurantSerializer,
-    TableSerializer,
-    UserProfileSerializer,
-)
-from common.tasks import import_menu_items
-from common.taxonomies import MenuType, OrderStatus, PriceType, serialize
-
-
-def is_ajax(request) -> bool:
-    return request.headers.get("x-requested-with") == "XMLHttpRequest"
-
-
-def is_valid_uid(uid, version=4) -> bool:
-    try:
-        uuid.UUID(uid, version=version)
-    except ValueError:
-        return False
-    return True
-
-
-class AuthMixin:
-    @method_decorator(login_required)
-    def dispatch(self, request, *args, **kwargs):
-        return super(AuthMixin, self).dispatch(  # noqa
-            request, *args, **kwargs
-        )
+from shared.common.mixins import AuthMixin
 
 
 class HomePage(TemplateView):
     template_name = "common/home.html"
 
 
-# ---------------------------------------------------------------------------
-# Django-template views (new)
-# ---------------------------------------------------------------------------
-
-class DashboardPage(AuthMixin, TemplateView):
-    template_name = "common/dashboard/chain.html"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        restaurants = Restaurant.objects.filter(
-            chain=self.request.chain
-        ).order_by("name")
-        for r in restaurants:
-            r.order_count = Order.objects.filter(table__restaurant=r).count()
-        ctx["restaurants"] = restaurants
-        ctx["user_profile"] = self.request.profile
-        ctx["NOTIFY_WS_DATA"] = json.dumps([
-            {"rid": str(r.uid), "url": reverse("common:dashboard-order", kwargs={"uid": str(r.uid)})}
-            for r in restaurants
-        ])
-        return ctx
-
-
-class RestaurantDetailPage(AuthMixin, TemplateView):
-    template_name = "common/dashboard/restaurant.html"
-
-    def get_context_data(self, **kwargs):
-        
-        ctx = super().get_context_data(**kwargs)
-        restaurant = get_object_or_404(
-            Restaurant, uid=kwargs["uid"], chain=self.request.chain
-        )
-        ctx["restaurant"] = restaurant
-        ctx["tables"] = Table.objects.filter(restaurant=restaurant).order_by("number")
-        ctx["categories"] = Category.objects.filter(restaurant=restaurant).order_by("name")
-        ctx["user_profile"] = self.request.profile
-        ctx["category_form"] = CategoryForm(restaurant=restaurant)
-        ctx["NOTIFY_WS_DATA"] = json.dumps([
-            {"rid": str(restaurant.uid), "url": reverse("common:dashboard-order", kwargs={"uid": str(restaurant.uid)})}
-        ])
-        return ctx
-
-
-class CategoryDetailPage(AuthMixin, TemplateView):
-    template_name = "common/dashboard/category.html"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        category = get_object_or_404(
-            Category,
-            uid=kwargs["uid"],
-            restaurant__chain=self.request.chain,
-        )
-        menu_items = MenuItem.objects.filter(category=category)
-        ctx["category"] = category
-        ctx["menu_items"] = menu_items
-        ctx["show_half_price"] = menu_items.filter(half_price__gt=0).exists()
-        ctx["user_profile"] = self.request.profile
-        ctx["menu_type_choices"] = MenuType.choices
-        ctx["menu_item_form"] = MenuItemForm(category=category)
-        ctx["NOTIFY_WS_DATA"] = json.dumps([
-            {"rid": str(category.restaurant.uid), "url": reverse("common:dashboard-order", kwargs={"uid": str(category.restaurant.uid)})}
-        ])
-        return ctx
-
-
-class OrderDashboardPage(AuthMixin, TemplateView):
-    template_name = "common/dashboard/order.html"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        restaurant = get_object_or_404(
-            Restaurant, uid=kwargs["uid"], chain=self.request.chain
-        )
-        status_filter = self.request.GET.get("status", "")
-        orders = Order.objects.filter(
-            table__restaurant=restaurant
-        ).prefetch_related("orderitem_set__menu_item").order_by("-created")
-        if status_filter:
-            orders = orders.filter(status=status_filter)
-        ctx["restaurant"] = restaurant
-        ctx["orders"] = orders
-        ctx["status_filter"] = status_filter
-        ctx["order_statuses"] = OrderStatus.choices
-        ctx["user_profile"] = self.request.profile
-        return ctx
-
-
-class TableMenuPage(TemplateView):
-    template_name = "common/table/table.html"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        table = get_object_or_404(Table, uid=kwargs["table_uid"])
-        search = self.request.GET.get("search", "")
-        categories = table.restaurant.category_set.order_by("name").prefetch_related(
-            Prefetch(
-                "menuitem_set",
-                queryset=MenuItem.objects.filter(
-                    Q(name__icontains=search) | Q(description__icontains=search)
-                ),
-                to_attr="filtered_items",
-            )
-        )
-        category_data = []
-        for cat in categories:
-            items = cat.filtered_items
-            if items:
-                category_data.append({"category": cat, "menu_items": items})
-        ctx["table"] = table
-        ctx["category_data"] = category_data
-        ctx["search"] = search
-        return ctx
-
-
-class TableOrderPage(TemplateView):
-    template_name = "common/table/order.html"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        table = get_object_or_404(Table, uid=kwargs["table_uid"])
-        session_uid = self.request.session.get("uid", str(uuid.uuid4()))
-        self.request.session["uid"] = session_uid
-        orders = Order.objects.filter(
-            table=table, session_uid=session_uid
-        ).prefetch_related("orderitem_set__menu_item")
-        total_price = sum(o.total_price for o in orders)
-        ctx["table"] = table
-        ctx["orders"] = orders
-        ctx["total_price"] = total_price
-        ctx["session_uid"] = session_uid
-        return ctx
-
-
-# ---------------------------------------------------------------------------
-# Django-template CRUD form handlers (POST endpoints)
-# ---------------------------------------------------------------------------
-
-class RestaurantCreateView(AuthMixin, FormView):
-    form_class = RestaurantForm
-    http_method_names = ["post"]
-
-    def form_valid(self, form):
-        uid = form.cleaned_data.get("uid")
-        if uid:
-            restaurant = get_object_or_404(Restaurant, uid=uid, chain=self.request.chain)
-            restaurant.name = form.cleaned_data["name"]
-            restaurant.save()
-        else:
-            Restaurant.objects.create(name=form.cleaned_data["name"], chain=self.request.chain)
-        return redirect(reverse("common:dashboard"))
-
-    def form_invalid(self, form):
-        return redirect(reverse("common:dashboard"))
-
-
-class RestaurantDeleteView(AuthMixin, TemplateView):
-    http_method_names = ["post"]
-
-    def post(self, request, uid, **kwargs):
-        restaurant = get_object_or_404(Restaurant, uid=uid, chain=request.chain)
-        for category in restaurant.category_set.all():
-            category.menuitem_set.all().delete()
-            category.delete()
-        restaurant.table_set.all().delete()
-        restaurant.delete()
-        return redirect(reverse("common:dashboard"))
-
-
-class TableCreateView(AuthMixin, TemplateView):
-    http_method_names = ["post"]
-
-    def post(self, request, uid, **kwargs):
-        restaurant = get_object_or_404(Restaurant, uid=uid, chain=request.chain)
-        Table.objects.create(restaurant=restaurant)
-        return redirect(reverse("common:dashboard-restaurant", kwargs={"uid": uid}))
-
-
-class TableDeleteView(AuthMixin, TemplateView):
-    http_method_names = ["post"]
-
-    def post(self, request, uid, **kwargs):
-        restaurant = get_object_or_404(Restaurant, uid=uid, chain=request.chain)
-        table = restaurant.table_set.last()
-        if table:
-            table.delete()
-        return redirect(reverse("common:dashboard-restaurant", kwargs={"uid": uid}))
-
-
-class CategoryCreateView(AuthMixin, FormView):
-    form_class = CategoryForm
-    http_method_names = ["post"]
-
-    def get_form_kwargs(self):
-        kw = super().get_form_kwargs()
-        kw["restaurant"] = None
-        return kw
-
-    def form_valid(self, form):
-        restaurant_uid = self.request.POST.get("restaurant_uid")
-        uid = form.cleaned_data.get("uid")
-        if uid:
-            category = get_object_or_404(
-                Category, uid=uid, restaurant__chain=self.request.chain
-            )
-            category.name = form.cleaned_data["name"]
-            category.save()
-            return redirect(
-                reverse("common:dashboard-restaurant", kwargs={"uid": str(category.restaurant.uid)})
-            )
-        restaurant = get_object_or_404(
-            Restaurant, uid=restaurant_uid, chain=self.request.chain
-        )
-        Category.objects.create(name=form.cleaned_data["name"], restaurant=restaurant)
-        return redirect(
-            reverse("common:dashboard-restaurant", kwargs={"uid": restaurant_uid})
-        )
-
-    def form_invalid(self, form):
-        return redirect(self.request.META.get("HTTP_REFERER", reverse("common:dashboard")))
-
-
-class CategoryDeleteView(AuthMixin, TemplateView):
-    http_method_names = ["post"]
-
-    def post(self, request, uid, **kwargs):
-        category = get_object_or_404(
-            Category, uid=uid, restaurant__chain=request.chain
-        )
-        restaurant_uid = str(category.restaurant.uid)
-        category.menuitem_set.all().delete()
-        category.delete()
-        return redirect(reverse("common:dashboard-restaurant", kwargs={"uid": restaurant_uid}))
-
-
-class CategoryImportView(AuthMixin, TemplateView):
-    http_method_names = ["post"]
-
-    def post(self, request, uid, **kwargs):
-        restaurant = get_object_or_404(Restaurant, uid=uid, chain=request.chain)
-        if not restaurant.category_set.exists():
-            import_menu_items(restaurant.id)
-        return redirect(reverse("common:dashboard-restaurant", kwargs={"uid": uid}))
-
-
-class MenuItemCreateView(AuthMixin, FormView):
-    form_class = MenuItemForm
-    http_method_names = ["post"]
-
-    def get_form_kwargs(self):
-        kw = super().get_form_kwargs()
-        kw["category"] = None
-        return kw
-
-    def form_valid(self, form):
-        category_uid = self.request.POST.get("category_uid")
-        uid = form.cleaned_data.get("uid")
-        if uid:
-            item = get_object_or_404(
-                MenuItem, uid=uid, category__restaurant__chain=self.request.chain
-            )
-            for field in ["name", "menu_type", "available", "full_price", "half_price", "description", "ingredients"]:
-                setattr(item, field, form.cleaned_data[field])
-            item.save()
-            return redirect(
-                reverse("common:dashboard-category", kwargs={"uid": str(item.category.uid)})
-            )
-        category = get_object_or_404(
-            Category, uid=category_uid, restaurant__chain=self.request.chain
-        )
-        MenuItem.objects.create(category=category, **{
-            k: form.cleaned_data[k]
-            for k in ["name", "menu_type", "available", "full_price", "half_price", "description", "ingredients"]
-        })
-        return redirect(
-            reverse("common:dashboard-category", kwargs={"uid": category_uid})
-        )
-
-    def form_invalid(self, form):
-        return redirect(self.request.META.get("HTTP_REFERER", reverse("common:dashboard")))
-
-
-class MenuItemDeleteView(AuthMixin, TemplateView):
-    http_method_names = ["post"]
-
-    def post(self, request, uid, **kwargs):
-        item = get_object_or_404(
-            MenuItem, uid=uid, category__restaurant__chain=request.chain
-        )
-        category_uid = str(item.category.uid)
-        item.delete()
-        return redirect(reverse("common:dashboard-category", kwargs={"uid": category_uid}))
-
-
-# ---------------------------------------------------------------------------
-# Auth views (unchanged)
-# ---------------------------------------------------------------------------
-
-class LoginView(FormView):
-    form_class = LoginForm
-    template_name = "common/login.html"
-    success_url = reverse_lazy("common:dashboard")
-
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            return redirect(self.success_url)
-        return super(LoginView, self).dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form: LoginForm):
-        logger.info(form.cleaned_data)
-        if form.cleaned_data.get("is_guest"):
-            user = User.objects.create(username=generate_username())
-            chain, _ = Chain.objects.get_or_create(name=generate_chain_name())
-            UserProfile.objects.create(user=user, chain=chain, is_guest=True)
-        else:
-            username = form.cleaned_data.get("username")
-            password = form.cleaned_data.get("password")
-            user = authenticate(
-                self.request, username=username, password=password
-            )
-            if not user:
-                form.errors.password = ("Invalid login credentials!!",)
-                return super(LoginView, self).form_invalid(form)
-        login(self.request, user)
-        return redirect(self.success_url)
-
-    def form_invalid(self, form):
-        if is_ajax(self.request):
-            return JsonResponse(
-                {"status": 400, "errors": form.errors}, status=400
-            )
-        return super(LoginView, self).form_invalid(form)
-
-
-class Logout(AuthMixin, TemplateView):
-    def get(self, request, *args, **kwargs):
-        logout(request)
-        return redirect(reverse("common:home"))
-
-
-class UserProfileViewSet(AuthMixin, ModelViewSet):
-    lookup_field = "uid"
-    serializer_class = LiteUserProfileSerializer
-    http_method_names = ("get", "patch")
-
-    def get_queryset(self):
-        return UserProfile.objects.all()
-
-
-class UserViewSet(ModelViewSet):
-    serializer_class = UserProfileSerializer
-    http_method_names = ("get", "patch")
-
-    def get_queryset(self):
-        if self.request.method.upper() == "PATCH" and self.kwargs.get("uid"):
-            return UserProfile.objects.filter(user=self.request.user)
-        return UserProfile.objects.all()
-
-    def get_object(self):
-        if self.request.user.is_authenticated:
-            return UserProfile.objects.get(user=self.request.user)
-        uid = self.request.session.get("uid", str(uuid.uuid4()))
-        self.request.session["uid"] = uid
-        return UserProfile(uid=uid)
-
-
-class RestaurantViewSet(AuthMixin, ModelViewSet):
-    lookup_field = "uid"
-    serializer_class = RestaurantSerializer
-
-    def get_queryset(self):
-        return Restaurant.objects.filter(chain=self.request.chain)
-
-    def perform_create(self, serializer):
-        return serializer.save(chain=self.request.chain)
-
-    def destroy(self, request, **kwargs):
-        instance = self.get_object()
-        for category in instance.category_set.all():
-            category.menuitem_set.all().delete()
-            category.delete()
-        instance.table_set.all().delete()
-        return super(RestaurantViewSet, self).destroy(request, **kwargs)
-
-    @action(methods=["POST"], detail=True)
-    def import_menu(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            if instance.category_set.count():
-                raise ValueError("This restaurant already has categories!!")
-            import_menu_items(instance.id)
-            return Response(status=HTTP_200_OK)
-        except Exception as e:
-            raise ValidationError(dict(detail=e))
-
-    @action(methods=["DELETE"], detail=True)
-    def table(self, request, *args, **kwargs):
-        instance = self.get_object()
-        table_last = instance.table_set.last()
-        if not table_last:
-            return Response(status=HTTP_404_NOT_FOUND)
-        table_last.delete()
-        return Response(status=HTTP_204_NO_CONTENT)
-
-
-class TableViewSet(ModelViewSet):
-    lookup_field = "uid"
-    serializer_class = TableSerializer
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ("restaurant__uid",)
-    http_method_names = ("get", "post", "delete")
-
-    def get_queryset(self):
-        if self.request.method.upper() == "GET":
-            return Table.objects.all()
-        return Table.objects.filter(
-            restaurant__chain=self.request.chain
-        ).order_by("number")
-
-    @action(methods=["GET"], detail=True)
-    def categories(self, request, *args, **kwargs):
-        try:
-            instance: Table = self.get_object()
-            data = dict(
-                table=TableSerializer(instance=instance).data, categories=[]
-            )
-            search_term = request.GET.get("search", "")
-            categories = instance.restaurant.category_set.order_by(
-                "name"
-            ).prefetch_related(
-                Prefetch(
-                    "menuitem_set",
-                    queryset=MenuItem.objects.filter(
-                        Q(name__icontains=search_term)
-                        | Q(description__icontains=search_term)
-                    ),
-                    to_attr="filtered_menuitems",
-                )
-            )
-
-            for category in categories:
-                menu_items = category.filtered_menuitems
-                if not len(menu_items):
-                    continue
-                total_half_price = sum(item.half_price for item in menu_items)
-                data["categories"].append(
-                    {
-                        "category": LiteCategorySerializer(
-                            instance=category
-                        ).data,
-                        "has_half_price": total_half_price > 0,
-                        "menu_items_count": len(menu_items),
-                        "menu_items": LiteMenuItemSerializer(
-                            instance=menu_items, many=True
-                        ).data,
-                    }
-                )
-
-            return Response(data=data, status=HTTP_200_OK)
-        except Http404:
-            raise Http404
-        except Exception as e:
-            raise ValidationError(dict(detail=e))
-
-    @action(methods=["GET"], detail=True)
-    def cart(self, request, *args, **kwargs):
-        try:
-            instance: Table = self.get_object()
-            data = dict(table=TableSerializer(instance=instance).data, cart={})
-            cart = json.loads(unquote(request.COOKIES.get("cart", "{}")))
-            for key, val in cart.items():
-                uid, price_type = key.split("/", 1)
-                if (
-                    menu_item := MenuItem.objects.filter(
-                        uid=uid,
-                        available=True,
-                        category__restaurant=instance.restaurant,
-                    ).first()
-                ) and (quantity := val.get("quantity", 0)):
-                    data["cart"][key] = dict(
-                        menu_item=LiteMenuItemSerializer(
-                            instance=menu_item
-                        ).data,
-                        price=menu_item.half_price
-                        if price_type == PriceType.HALF
-                        else menu_item.full_price,
-                        price_type=price_type,
-                        quantity=quantity,
-                    )
-            return Response(data=data, status=HTTP_200_OK)
-        except Http404:
-            raise Http404
-        except Exception as e:
-            raise ValidationError(dict(detail=e))
-
-
-class CategoryViewSet(AuthMixin, ModelViewSet):
-    lookup_field = "uid"
-    serializer_class = CategorySerializer
-    filter_backends = (DjangoFilterBackend, SearchFilter)
-    filterset_fields = ("restaurant__uid",)
-    search_fields = ("name",)
-
-    def get_queryset(self):
-        return Category.objects.filter(
-            restaurant__chain=self.request.chain
-        ).order_by("name")
-
-
-class MenuItemViewSet(AuthMixin, ModelViewSet):
-    lookup_field = "uid"
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ("category__uid",)
-    serializer_class = MenuItemSerializer
-
-    def get_queryset(self):
-        if self.request.method.upper() == "GET":
-            return MenuItem.objects.all()
-        return MenuItem.objects.filter(
-            category__restaurant__chain=self.request.chain
-        )
-
-
-class OrderViewSet(AuthMixin, ModelViewSet):
-    lookup_field = "uid"
-    serializer_class = OrderSerializer
-    filter_backends = (DjangoFilterBackend, OrderingFilter)
-    filterset_fields = ("table__restaurant__uid", "status")
-    ordering_fields = ("created",)
-    http_method_names = ("get",)
-
-    def get_queryset(self):
-        return Order.objects.filter(
-            table__restaurant__chain=self.request.chain
-        )
-
-
-class OrderAPIView(APIView):
-    def get(self, request, *args, **kwargs):
-        try:
-            uid = kwargs.get("uid", None)
-            if not uid or not is_valid_uid(uid):
-                raise Http404
-            request.session["uid"] = request.session.get(
-                "uid", str(uuid.uuid4())
-            )
-            instance = Table.objects.get(uid=uid)
-            orders = Order.objects.filter(
-                table=instance, session_uid=request.session["uid"]
-            )
-            data = dict(
-                table=TableSerializer(instance=instance).data,
-                orders=OrderSerializer(instance=orders, many=True).data,
-                session_uid=request.session["uid"],
-                total_price=sum(o.total_price for o in orders),
-            )
-            return Response(data=data, status=HTTP_200_OK)
-        except Http404:
-            raise Http404
-        except Exception as e:
-            raise ValidationError(dict(detail=e))
-
-    def post(self, request, *args, **kwargs):
-        try:
-            uid = kwargs.get("uid", None)
-            if not uid or not is_valid_uid(uid):
-                raise Http404
-            instance = Table.objects.get(uid=uid)
-            request.session["uid"] = request.session.get(
-                "uid", str(uuid.uuid4())
-            )
-            request.session["table"] = str(instance.uid)
-            cart = json.loads(unquote(request.COOKIES.get("cart", "{}")))
-            order, _ = Order.objects.get_or_create(
-                table=instance,
-                status=OrderStatus.PENDING,
-                session_uid=request.session["uid"],
-            )
-            for key, val in cart.items():
-                menu_uid, price_type = key.split("/", 1)
-                menu_item = MenuItem.objects.filter(
-                    uid=menu_uid, available=True
-                ).first()
-
-                if not menu_item:
-                    continue
-
-                quantity = val.get("quantity", 0)
-                item, created = OrderItem.objects.get_or_create(
-                    order=order,
-                    menu_item=menu_item,
-                    price_type=price_type,
-                    defaults={"quantity": quantity},
-                )
-
-                if not created:
-                    item.quantity += quantity
-
-                item.clean()
-                item.save()
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                str(order.session_uid),
-                {
-                    "type": "send_order",
-                    "order": order,
-                },
-            )
-            async_to_sync(channel_layer.group_send)(
-                str(order.table.restaurant.uid),
-                {
-                    "type": "send_order",
-                    "order": order,
-                },
-            )
-            return Response(status=HTTP_200_OK)
-        except Http404:
-            raise Http404
-        except Exception as e:
-            raise ValidationError(dict(detail=e))
+# Legacy class name preserved for backward compatibility.
+Logout = LogoutView
+
+__all__ = [
+    "AuthMixin",
+    "HomePage",
+    "DashboardPage",
+    "RestaurantDetailPage",
+    "RestaurantTablesPage",
+    "RestaurantCategoriesPage",
+    "CategoryDetailPage",
+    "CategoryEditView",
+    "MenuItemFormView",
+    "TableMenuPage",
+    "TableOrderPage",
+    "OrderDashboardPage",
+    "RestaurantCreateView",
+    "RestaurantDeleteView",
+    "TableCreateView",
+    "TableDeleteView",
+    "CategoryCreatePageView",
+    "CategoryCreateView",
+    "CategoryDeleteView",
+    "CategoryImportView",
+    "MenuItemCreateView",
+    "MenuItemDeleteView",
+    "LoginView",
+    "Logout",
+    "LogoutView",
+    "UserProfileViewSet",
+    "UserViewSet",
+    "RestaurantViewSet",
+    "TableViewSet",
+    "CategoryViewSet",
+    "MenuItemViewSet",
+    "OrderViewSet",
+    "OrderAPIView",
+    "is_ajax",
+    "is_valid_uid",
+]

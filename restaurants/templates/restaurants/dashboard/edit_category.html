@@ -1,0 +1,13 @@
+{% extends 'common/base.html' %}
+{% block title %}Edit Category | Waiter{% endblock %}
+{% block content %}
+{% include 'common/partials/user_navbar.html' %}
+<div class="container py-4">
+  <h2>Edit Category</h2>
+  <form method="post" action="{% url 'common:category-edit' category.uid %}">
+    {% csrf_token %}
+    <div class="mb-3"><input type="text" name="name" class="form-control" value="{{ category.name }}" required></div>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </form>
+</div>
+{% endblock %}

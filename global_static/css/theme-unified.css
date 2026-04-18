@@ -1,0 +1,185 @@
+/* Unified visual layer across apps (logic-safe CSS only) */
+
+/* Shared cards */
+.restaurant-card,
+.table-card,
+.menu-card,
+.section-card,
+.order-card,
+.cust-order-card,
+.qr-card,
+.cat-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  transition: var(--t);
+}
+
+.restaurant-card:hover,
+.table-card:hover,
+.menu-card:hover,
+.order-card:hover,
+.qr-card:hover,
+.cat-card:hover {
+  box-shadow: var(--shadow);
+}
+
+/* Consistent dark section headers */
+.rc-header,
+.oc-header,
+.table-card-header,
+.chat-panel-header {
+  background: linear-gradient(135deg, var(--dark), #16213e);
+}
+
+/* Consistent status pills */
+.oc-badge,
+.cust-status-pill {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+}
+
+/* Unified content separators */
+.oc-stats,
+.oc-footer,
+.section-card-footer,
+.card-actions,
+.rest-card-head {
+  border-color: var(--border) !important;
+}
+
+/* Muted helper consistency */
+.text-muted {
+  color: var(--text-3) !important;
+}
+
+/* Keep focus ring aligned everywhere */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+
+/* Restaurants dashboard family */
+.rc-chain,
+.table-badge,
+.info-row-label,
+.menu-desc,
+.half-price,
+.qr-link,
+.page-sub,
+.bc .cur {
+  color: var(--text-3) !important;
+}
+
+.rc-name,
+.menu-title,
+.info-row-value,
+.page-title,
+.section-card-title {
+  color: var(--text) !important;
+}
+
+.section-card-body,
+.qr-wrap,
+.info-row {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+}
+
+.price,
+.menu-card-price,
+.total-value {
+  color: var(--red) !important;
+}
+
+.card-actions,
+.oc-footer,
+.rest-card-head,
+.rc-stats,
+.oc-stats {
+  background: var(--surface-2);
+}
+
+/* Orders (staff + customer) */
+.status-link {
+  border-color: var(--border) !important;
+  color: var(--text-2) !important;
+  background: var(--surface) !important;
+}
+
+.status-link.active {
+  background: var(--red) !important;
+  border-color: var(--red) !important;
+  color: #fff !important;
+}
+
+.oc-item-name,
+.item-name {
+  color: var(--text) !important;
+}
+
+.oc-item-qty,
+.item-meta,
+.oc-time {
+  color: var(--text-3) !important;
+}
+
+.oc-stat-lbl,
+.total-label {
+  color: var(--text-3) !important;
+}
+
+.oc-stat-num {
+  color: var(--text) !important;
+}
+
+.chat-bubble.bot {
+  background: var(--surface-3) !important;
+  color: var(--text) !important;
+}
+
+/* Customer table page */
+.table-header,
+.cart-container,
+.chat-panel {
+  border-color: var(--border) !important;
+}
+
+.category-title::before,
+.btn-add,
+.chat-fab {
+  background: var(--red) !important;
+}
+
+.btn-add:hover {
+  background: var(--dark) !important;
+}
+
+.cart-header,
+.chat-panel-header {
+  background: linear-gradient(135deg, var(--dark), #16213e) !important;
+}
+
+/* Login + Home token harmonization */
+.btn-login,
+.btn-hero-primary {
+  background: linear-gradient(135deg, var(--red), var(--red-dark)) !important;
+}
+
+.btn-guest,
+.btn-hero-outline {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.error-msg,
+.qr-error {
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+/* Notify banner */
+#order-notify-cta {
+  color: var(--red) !important;
+}
